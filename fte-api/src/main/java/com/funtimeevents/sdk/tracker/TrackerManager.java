@@ -7,9 +7,9 @@ import com.funtimeevents.sdk.tracker.chat.ChatTracker;
 import com.funtimeevents.sdk.tracker.dungeon.DungeonTracker;
 import com.funtimeevents.sdk.tracker.hell.HellMapTracker;
 import com.funtimeevents.sdk.tracker.mine.MineTracker;
+import com.funtimeevents.sdk.tracker.spawn.SpawnEventTracker;
 import com.funtimeevents.sdk.tracker.tab.TabTracker;
 import com.funtimeevents.sdk.tracker.tabheader.TabHeaderTracker;
-import com.funtimeevents.sdk.tracker.world.WorldPlayerTracker;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -23,12 +23,12 @@ public final class TrackerManager {
         tabTracker = new TabTracker();
         trackers.add(TabHeaderTracker.getInstance());
         trackers.add(new ChatTracker());
-        trackers.add(new WorldPlayerTracker());
         trackers.add(tabTracker);
         trackers.add(new BanTracker());
         trackers.add(new DungeonTracker());
         trackers.add(new HellMapTracker());
         trackers.add(new MineTracker());
+        trackers.add(new SpawnEventTracker());
     }
 
     public void startAll() {

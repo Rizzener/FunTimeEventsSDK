@@ -64,9 +64,8 @@ public final class MineTracker implements Tracker {
             playersAround.add(new TabPlayer(name, donate, now));
         }
 
-        FteLogger.info("Mine lobby: " + playersAround.size() + " players around spawn");
-
         if (!playersAround.isEmpty()) {
+            FteLogger.info("Mine lobby: " + playersAround.size() + " players around spawn");
             var payload = new MinePlayersAroundPayload(header.getServerId(), header.getServerType(), playersAround);
             FunTimeEventsAPI.sendMinePlayers(payload);
         }

@@ -1,10 +1,10 @@
 package com.funtimeevents.sdk.net;
 
-import com.funtimeevents.sdk.event.FteEvent;
 import com.funtimeevents.sdk.model.BanPayload;
 import com.funtimeevents.sdk.model.DungeonPayload;
 import com.funtimeevents.sdk.model.HellMapPayload;
 import com.funtimeevents.sdk.model.MinePlayersAroundPayload;
+import com.funtimeevents.sdk.model.SpawnEventPayload;
 import com.funtimeevents.sdk.model.TabPlayersPayload;
 import com.funtimeevents.sdk.util.FteLogger;
 import com.google.gson.Gson;
@@ -14,7 +14,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public final class ApiClient {
@@ -33,13 +32,6 @@ public final class ApiClient {
                 .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(TIMEOUT)
                 .build();
-    }
-
-    public CompletableFuture<Void> sendEvents(List<FteEvent> events) {
-        if (events.isEmpty()) {
-            return CompletableFuture.completedFuture(null);
-        }
-        return postJson("/events", new EventsPayload(events));
     }
 
     public CompletableFuture<Void> sendTabPlayers(TabPlayersPayload payload) {
@@ -66,6 +58,10 @@ public final class ApiClient {
         return postJson("/mines/players-around", payload);
     }
 
+    public CompletableFuture<Void> sendSpawnEvent(SpawnEventPayload payload) {
+        return postJson("/events/spawn", payload);
+    }
+
     private CompletableFuture<Void> postJson(String path, Object body) {
         String json = GSON.toJson(body);
 
@@ -80,10 +76,10 @@ public final class ApiClient {
         return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenAccept(response -> {
                     if (response.statusCode() >= 400) {
-                        String responseBody = response.body();
-                        FteLogger.warn("HTTP " + response.statusCode() + " from " + path + ": " + responseBody);
-                        throw new RuntimeException("HTTP " + response.statusCode() + ": " + responseBody);
+                        FteLogger.warn("HTTP " + response.statusCode() + " from " + path + ": " + response.body());
+                        throw new RuntimeException("HTTP " + response.statusCode() + ": " + response.body());
                     }
+                    FteLogger.info("POST " + path + " -> " + response.statusCode() + " " + response.body());
                 })
                 .exceptionallyCompose(ex -> {
                     if (!(ex.getCause() instanceof RuntimeException)) {
@@ -91,9 +87,5 @@ public final class ApiClient {
                     }
                     return CompletableFuture.failedFuture(ex);
                 });
-    }
-
-    @SuppressWarnings("unused")
-    private record EventsPayload(List<FteEvent> events) {
     }
 }

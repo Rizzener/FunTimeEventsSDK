@@ -7,6 +7,7 @@ import com.funtimeevents.sdk.model.BanPayload;
 import com.funtimeevents.sdk.model.DungeonPayload;
 import com.funtimeevents.sdk.model.HellMapPayload;
 import com.funtimeevents.sdk.model.MinePlayersAroundPayload;
+import com.funtimeevents.sdk.model.SpawnEventPayload;
 import com.funtimeevents.sdk.model.TabPlayersPayload;
 import com.funtimeevents.sdk.net.ApiClient;
 import com.funtimeevents.sdk.util.FteLogger;
@@ -102,6 +103,12 @@ public final class FunTimeEventsAPI {
     public static void sendMinePlayers(MinePlayersAroundPayload payload) {
         if (apiClient != null) {
             apiClient.sendMinePlayers(payload);
+        }
+    }
+
+    public static void sendSpawnEvent(SpawnEventPayload payload) {
+        if (apiClient != null) {
+            apiClient.sendSpawnEvent(payload);
         }
     }
 

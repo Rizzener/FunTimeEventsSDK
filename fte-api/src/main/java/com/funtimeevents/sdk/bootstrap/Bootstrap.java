@@ -55,13 +55,7 @@ public final class Bootstrap {
         running = true;
         FteLogger.info("Connected to world");
         trackerManager.startAll();
-        scheduler.start(() -> {
-            var world = MinecraftClient.getInstance().world;
-            if (world != null) {
-                FteLogger.info("World: " + world.getRegistryKey().getValue());
-            }
-            trackerManager.tickAll();
-        });
+        scheduler.start(() -> trackerManager.tickAll());
     }
 
     private void onWorldLeave() {

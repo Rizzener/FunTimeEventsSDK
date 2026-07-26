@@ -65,32 +65,40 @@ public final class DungeonTracker implements Tracker {
             return;
         }
 
+        var player = client.player;
+        if (player == null) {
+            return;
+        }
+
+        BlockPos playerPos = player.getBlockPos();
+        Zone playerZone = findZone(playerPos.getX(), playerPos.getZ());
+        if (playerZone == null || !playerZone.contains(playerPos.getX(), playerPos.getY(), playerPos.getZ())) {
+            return;
+        }
+
         int serverId = header.getServerId();
         String serverType = header.getServerType();
 
-        processZone(world, serverId, serverType, COPPER_ZONE);
-        processZone(world, serverId, serverType, WARDEN_ZONE);
+        processZone(world, serverId, serverType, playerZone);
     }
 
     private void processZone(World world, int serverId, String serverType, Zone zone) {
-        FteLogger.info("=== " + zone.name + " zone x[" + zone.minX + "," + zone.maxX + "] z[" + zone.minZ + "," + zone.maxZ + "] y[" + zone.minY + "," + zone.maxY + "] ===");
-
         List<PlayerGearInfo> players = scanPlayers(world, zone);
         List<ChestInfo> chests = scanChests(world, zone);
 
-        FteLogger.info("Dungeon " + zone.name + ": " + players.size() + " players, " + chests.size() + " chests");
-
-        for (PlayerGearInfo p : players) {
-            FteLogger.info("  Player: " + p.playerName() + " donate=" + p.donate()
-                    + " helm=" + p.helmet() + " chest=" + p.chestplate()
-                    + " legs=" + p.leggings() + " boots=" + p.boots()
-                    + " invis=" + p.isInvisible());
-        }
-        for (ChestInfo c : chests) {
-            FteLogger.info("  Chest: [" + c.x() + ", " + c.y() + ", " + c.z() + "] time_left=" + c.timeLeft() + "s");
-        }
-
         if (!players.isEmpty() || !chests.isEmpty()) {
+            FteLogger.info("Dungeon " + zone.name + ": " + players.size() + " players, " + chests.size() + " chests");
+
+            for (PlayerGearInfo p : players) {
+                FteLogger.info("  Player: " + p.playerName() + " donate=" + p.donate()
+                        + " helm=" + p.helmet() + " chest=" + p.chestplate()
+                        + " legs=" + p.leggings() + " boots=" + p.boots()
+                        + " invis=" + p.isInvisible());
+            }
+            for (ChestInfo c : chests) {
+                FteLogger.info("  Chest: [" + c.x() + ", " + c.y() + ", " + c.z() + "] time_left=" + c.timeLeft() + "s");
+            }
+
             DungeonPayload payload = new DungeonPayload(serverId, serverType, chests, players);
             if (zone == COPPER_ZONE) {
                 DungeonBroadcaster.publishCopper(payload);
@@ -116,10 +124,6 @@ public final class DungeonTracker implements Tracker {
             String boots = itemName(player.getEquippedStack(EquipmentSlot.FEET));
             boolean invisible = player.isInvisible();
 
-            FteLogger.info("  Player scan: " + name + " pos=[" + pos.getX() + ", " + pos.getY() + ", " + pos.getZ() + "]"
-                    + " helm=" + helmet + " chest=" + chestplate + " legs=" + leggings + " boots=" + boots
-                    + " invis=" + invisible + " donate=" + donate);
-
             result.add(new PlayerGearInfo(name, donate, helmet, chestplate, leggings, boots, invisible));
         }
         return result;
@@ -135,10 +139,6 @@ public final class DungeonTracker implements Tracker {
             }
         }
 
-        int totalEntities = entities.size();
-        int timeMatches = 0;
-        int foundChests = 0;
-
         for (Entity entity : entities) {
             String text = getDisplayText(entity);
             if (text == null || text.isEmpty()) {
@@ -148,51 +148,27 @@ public final class DungeonTracker implements Tracker {
             if (!m.matches()) {
                 continue;
             }
-            timeMatches++;
             int minutes = Integer.parseInt(m.group(1));
             int seconds = Integer.parseInt(m.group(2));
             int timeLeft = minutes * 60 + seconds;
 
             BlockPos entityPos = entity.getBlockPos();
-            boolean inZone = zone.contains(entityPos.getX(), entityPos.getZ());
-            String zoneMarker = inZone ? " [IN ZONE]" : " [OUTSIDE]";
-            String entityType = entity.getType().getName().getString();
-            FteLogger.info("  HOLO: '" + text + "' type=" + entityType + " at [" + entityPos.getX() + "," + entityPos.getY() + "," + entityPos.getZ() + "] " + timeLeft + "s" + zoneMarker);
-
-            int chestsUnder = 0;
             for (int dy = 1; dy <= 3; dy++) {
                 BlockPos blockPos = entityPos.down(dy);
                 var block = world.getBlockState(blockPos).getBlock();
                 if (block == Blocks.CHEST || block == Blocks.BARREL || block == Blocks.TRAPPED_CHEST) {
-                    chestsUnder++;
-                    foundChests++;
                     hologramMap.putIfAbsent(blockPos, timeLeft);
-                    FteLogger.info("    CHEST found at [" + blockPos.getX() + "," + blockPos.getY() + "," + blockPos.getZ() + "] time_left=" + timeLeft + "s");
                 }
-            }
-            if (chestsUnder == 0) {
-                FteLogger.info("    No chest under (blocks: dy=1:" + world.getBlockState(entityPos.down(1)).getBlock().getTranslationKey()
-                        + " dy=2:" + world.getBlockState(entityPos.down(2)).getBlock().getTranslationKey()
-                        + " dy=3:" + world.getBlockState(entityPos.down(3)).getBlock().getTranslationKey() + ")");
             }
         }
 
-        int inZoneChests = 0;
-        int outsideZoneChests = 0;
         List<ChestInfo> result = new ArrayList<>();
         for (var entry : hologramMap.entrySet()) {
             BlockPos pos = entry.getKey();
             if (zone.contains(pos.getX(), pos.getY(), pos.getZ())) {
-                inZoneChests++;
                 result.add(new ChestInfo(pos.getX(), pos.getY(), pos.getZ(), entry.getValue()));
-            } else {
-                outsideZoneChests++;
-                FteLogger.info("  Chest [" + pos.getX() + "," + pos.getY() + "," + pos.getZ() + "] outside " + zone.name + " zone");
             }
         }
-
-        FteLogger.info("  SCAN: " + totalEntities + " entities, " + timeMatches + " time_matches, " + foundChests + " chests_found, " + inZoneChests + " in zone");
-
         return result;
     }
 
@@ -234,5 +210,11 @@ public final class DungeonTracker implements Tracker {
             }
         }
         return "";
+    }
+
+    private Zone findZone(int x, int z) {
+        if (WARDEN_ZONE.contains(x, z)) return WARDEN_ZONE;
+        if (COPPER_ZONE.contains(x, z)) return COPPER_ZONE;
+        return null;
     }
 }
