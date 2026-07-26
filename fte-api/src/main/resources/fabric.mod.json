@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "fte-api",
+  "version": "${version}",
+  "name": "FunTimeEvents API",
+  "description": "FunTimeEvents SDK - client-side tracking library for Minecraft Fabric",
+  "authors": ["FunTimeEvents"],
+  "contact": {},
+  "license": "MIT",
+  "environment": "client",
+  "depends": {
+    "minecraft": ">=1.21.0"
+  },
+  "custom": {
+    "modmenu": {
+      "badges": ["library"]
+    }
+  }
+}
