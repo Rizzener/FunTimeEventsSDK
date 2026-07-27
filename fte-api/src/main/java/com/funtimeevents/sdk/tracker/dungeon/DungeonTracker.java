@@ -34,6 +34,8 @@ public final class DungeonTracker implements Tracker {
     private static final Zone WARDEN_ZONE = new Zone("Warden", -2100, -1900, -2100, -1900, -60, 0);
     private static final Zone COPPER_ZONE = new Zone("Copper", 1900, 2100, 1900, 2100, -60, 5);
 
+    private static volatile java.lang.reflect.Method getTextMethod;
+
     private record Zone(String name, int minX, int maxX, int minZ, int maxZ, int minY, int maxY) {
         boolean contains(int x, int z) {
             return x >= minX && x <= maxX && z >= minZ && z <= maxZ;
@@ -132,32 +134,27 @@ public final class DungeonTracker implements Tracker {
     private List<ChestInfo> scanChests(World world, Zone zone) {
         Map<BlockPos, Integer> hologramMap = new HashMap<>();
 
-        List<Entity> entities = new ArrayList<>();
         if (world instanceof ClientWorld clientWorld) {
             for (Entity e : clientWorld.getEntities()) {
-                entities.add(e);
-            }
-        }
+                String text = getDisplayText(e);
+                if (text == null || text.isEmpty()) {
+                    continue;
+                }
+                Matcher m = TIME_PATTERN.matcher(text);
+                if (!m.matches()) {
+                    continue;
+                }
+                int minutes = Integer.parseInt(m.group(1));
+                int seconds = Integer.parseInt(m.group(2));
+                int timeLeft = minutes * 60 + seconds;
 
-        for (Entity entity : entities) {
-            String text = getDisplayText(entity);
-            if (text == null || text.isEmpty()) {
-                continue;
-            }
-            Matcher m = TIME_PATTERN.matcher(text);
-            if (!m.matches()) {
-                continue;
-            }
-            int minutes = Integer.parseInt(m.group(1));
-            int seconds = Integer.parseInt(m.group(2));
-            int timeLeft = minutes * 60 + seconds;
-
-            BlockPos entityPos = entity.getBlockPos();
-            for (int dy = 1; dy <= 3; dy++) {
-                BlockPos blockPos = entityPos.down(dy);
-                var block = world.getBlockState(blockPos).getBlock();
-                if (block == Blocks.CHEST || block == Blocks.BARREL || block == Blocks.TRAPPED_CHEST) {
-                    hologramMap.putIfAbsent(blockPos, timeLeft);
+                BlockPos entityPos = e.getBlockPos();
+                for (int dy = 1; dy <= 3; dy++) {
+                    BlockPos blockPos = entityPos.down(dy);
+                    var block = world.getBlockState(blockPos).getBlock();
+                    if (block == Blocks.CHEST || block == Blocks.BARREL || block == Blocks.TRAPPED_CHEST) {
+                        hologramMap.putIfAbsent(blockPos, timeLeft);
+                    }
                 }
             }
         }
@@ -176,8 +173,10 @@ public final class DungeonTracker implements Tracker {
         String className = entity.getClass().getSimpleName().toLowerCase();
         if (className.contains("textdisplay") || className.contains("text_display")) {
             try {
-                var method = entity.getClass().getMethod("getText");
-                var result = method.invoke(entity);
+                if (getTextMethod == null) {
+                    getTextMethod = entity.getClass().getMethod("getText");
+                }
+                var result = getTextMethod.invoke(entity);
                 if (result instanceof Text text) {
                     return text.getString().trim();
                 }

@@ -8,6 +8,8 @@ import com.funtimeevents.sdk.util.FteLogger;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -16,7 +18,33 @@ public final class HellMapTracker implements Tracker {
 
     private static final Pattern HELL_PATTERN = Pattern.compile("Адская резня - Осталось мобов:\\s*(\\d+)");
 
+    private static volatile Field bossBarsField;
+    private static volatile Method getNameMethod;
+
     private boolean active;
+
+    private static Field resolveBossBarsField() {
+        if (bossBarsField != null) return bossBarsField;
+        try {
+            var bossBarHud = MinecraftClient.getInstance().inGameHud.getBossBarHud();
+            var field = bossBarHud.getClass().getDeclaredField("bossBars");
+            field.setAccessible(true);
+            bossBarsField = field;
+        } catch (Exception e) {
+            FteLogger.error("bossBars field not found: " + e.getMessage());
+        }
+        return bossBarsField;
+    }
+
+    private static Method resolveGetNameMethod(Object bar) {
+        if (getNameMethod != null) return getNameMethod;
+        try {
+            getNameMethod = bar.getClass().getMethod("getName");
+        } catch (Exception e) {
+            FteLogger.error("getName method not found: " + e.getMessage());
+        }
+        return getNameMethod;
+    }
 
     @Override
     public void start() {
@@ -40,10 +68,11 @@ public final class HellMapTracker implements Tracker {
 
         var client = MinecraftClient.getInstance();
         var bossBarHud = client.inGameHud.getBossBarHud();
+        Field field = resolveBossBarsField();
+        if (field == null) return;
+
         Map<?, ?> bars;
         try {
-            var field = bossBarHud.getClass().getDeclaredField("bossBars");
-            field.setAccessible(true);
             bars = (Map<?, ?>) field.get(bossBarHud);
         } catch (Exception e) {
             return;
@@ -55,9 +84,11 @@ public final class HellMapTracker implements Tracker {
 
         for (var entry : bars.entrySet()) {
             var bar = entry.getValue();
+            Method nameMethod = resolveGetNameMethod(bar);
+            if (nameMethod == null) continue;
             Text name;
             try {
-                name = (Text) bar.getClass().getMethod("getName").invoke(bar);
+                name = (Text) nameMethod.invoke(bar);
             } catch (Exception e) {
                 continue;
             }
