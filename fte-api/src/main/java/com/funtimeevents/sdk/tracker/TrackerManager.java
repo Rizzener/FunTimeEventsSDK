@@ -4,7 +4,6 @@ import com.funtimeevents.sdk.api.FteConfig;
 import com.funtimeevents.sdk.model.TabPlayersPayload;
 import com.funtimeevents.sdk.spi.PayloadSender;
 import com.funtimeevents.sdk.tracker.ban.BanTracker;
-import com.funtimeevents.sdk.tracker.chat.ChatTracker;
 import com.funtimeevents.sdk.tracker.dungeon.DungeonTracker;
 import com.funtimeevents.sdk.tracker.hell.HellMapTracker;
 import com.funtimeevents.sdk.tracker.mine.MineTracker;
@@ -24,7 +23,6 @@ public final class TrackerManager {
     public TrackerManager(PayloadSender sender, FteConfig config) {
         this.sender = sender;
         trackers.add(TabHeaderTracker.getInstance());
-        trackers.add(new ChatTracker());
 
         if (config.bansEnabled()) {
             trackers.add(new BanTracker(sender));

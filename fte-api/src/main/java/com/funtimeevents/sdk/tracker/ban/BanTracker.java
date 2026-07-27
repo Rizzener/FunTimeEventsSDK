@@ -1,7 +1,5 @@
 package com.funtimeevents.sdk.tracker.ban;
 
-import com.funtimeevents.sdk.event.BanDetectedEvent;
-import com.funtimeevents.sdk.event.EventBus;
 import com.funtimeevents.sdk.model.BanPayload;
 import com.funtimeevents.sdk.spi.PayloadSender;
 import com.funtimeevents.sdk.tracker.Tracker;
@@ -50,8 +48,6 @@ public final class BanTracker implements Tracker {
         String playerName = matcher.group(1);
         String hoverText = extractHoverText(message);
         FteLogger.info("Ban detected: player=" + playerName + ", hover=" + hoverText);
-
-        EventBus.getInstance().publish(BanDetectedEvent.create(playerName, hoverText));
 
         String reason = parseReason(hoverText);
         String end = parseEnd(hoverText);

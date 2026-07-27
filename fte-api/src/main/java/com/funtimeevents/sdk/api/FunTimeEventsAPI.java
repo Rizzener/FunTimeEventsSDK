@@ -1,8 +1,6 @@
 package com.funtimeevents.sdk.api;
 
 import com.funtimeevents.sdk.bootstrap.Bootstrap;
-import com.funtimeevents.sdk.event.EventBus;
-import com.funtimeevents.sdk.event.FteEvent;
 import com.funtimeevents.sdk.model.BansListResponse;
 import com.funtimeevents.sdk.model.CaptchaResponse;
 import com.funtimeevents.sdk.model.EventResponse;
@@ -21,7 +19,6 @@ import com.funtimeevents.sdk.util.FteLogger;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 
 public final class FunTimeEventsAPI {
 
@@ -97,16 +94,6 @@ public final class FunTimeEventsAPI {
             instance = new FunTimeEventsAPI();
             return instance;
         }
-    }
-
-    // --- Local EventBus ---
-
-    public static List<FteEvent> pollEvents() {
-        return EventBus.getInstance().drain();
-    }
-
-    public static void onEvent(Consumer<FteEvent> listener) {
-        EventBus.getInstance().subscribe(listener);
     }
 
     // --- Backend GET ---
