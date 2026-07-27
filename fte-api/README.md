@@ -53,18 +53,29 @@ dependencies {
 
 ```java
 FunTimeEventsAPI.builder()
-    .userAgent("MyMod/1.0")
+    .userAgent("Client/1.0")
     .build();
 ```
 
 ### 3. Онлайн-режим с API-ключом
 
 ```java
+
+// WSS Relay режим (по умолчанию, рекомендуется):
 FunTimeEventsAPI.builder()
-    .userAgent("MyMod/1.0")
-    .apiKey("your-api-key")
+    .userAgent("Client/1.0")
+    .apiKey("sk-fte-***-client")
+    .build();
+
+// REST режим:
+FunTimeEventsAPI.builder()
+    .userAgent("Client/1.0")
+    .apiKey("sk-fte-***-client")
+    .disableWebSocket()
     .build();
 ```
+
+В WSS режиме POST-данные шлются через WebSocket `/relay`, а GET-запросы и captcha — через REST. Снапшоты приходят каждую секунду и кешируются локально.
 
 ### 4. Подписка на локальные события
 
@@ -109,16 +120,17 @@ FunTimeEventsAPI.fetchWardenCity()
     .thenAccept(System.out::println);
 ```
 
-### 6. Кеш из SSE-стримов
-
-Автоматически наполняется при online-инициализации:
+### 6. Кешированные данные (WSS relay, ≤5s свежесть)
 
 ```java
-// Актуальный кеш событий (обновляется стримом):
-Map<String, JsonObject> events = FunTimeEventsAPI.getCachedEvents();
+// Типизированные модели, обновляются из снапшотов relay:
+List<EventResponse> events = FunTimeEventsAPI.getEvents();
+List<MineResponse> mines = FunTimeEventsAPI.getMines();
+List<LootAreaResponse> copper = FunTimeEventsAPI.getCopperDungeons();
+List<LootAreaResponse> warden = FunTimeEventsAPI.getWardenCities();
+List<BanResponse> bans = FunTimeEventsAPI.getBans();
 
-// Актуальный кеш шахт:
-Map<String, JsonObject> mines = FunTimeEventsAPI.getCachedMines();
+// Если снапшот не обновлялся >5 секунд — вернётся пустой список
 ```
 
 ### 7. Отправка капчи
@@ -138,6 +150,7 @@ FunTimeEventsAPI.sendCaptcha(new CaptchaPayload("base64-encoded-screenshot"));
 | `.logLevel(LogLevel)` | `INFO` | `OFF`, `ERROR`, `WARN`, `INFO`, `DEBUG` |
 | `.tickIntervalSeconds(int)` | `10` | Периодичность сканирования |
 | `.offlineMode()` | — | Не создавать HTTP-клиент |
+| `.disableWebSocket()` | — | WSS relay для POST (REST остаётся для GET/captcha) |
 | `.disableScanTabPlayers()` | — | Не сканировать TAB и не слать `/players` |
 | `.disableBansTracker()` | — | Не отслеживать баны и не слать `/bans` |
 | `.disableScanDungeon()` | — | Не сканировать данжи и не слать `/copper-dungeon` `/warden-city` |

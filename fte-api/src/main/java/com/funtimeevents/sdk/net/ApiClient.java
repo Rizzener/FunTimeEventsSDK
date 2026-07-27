@@ -1,11 +1,14 @@
 package com.funtimeevents.sdk.net;
 
 import com.funtimeevents.sdk.model.BanPayload;
+import com.funtimeevents.sdk.model.BansListResponse;
 import com.funtimeevents.sdk.model.CaptchaPayload;
+import com.funtimeevents.sdk.model.CaptchaResponse;
 import com.funtimeevents.sdk.model.DungeonPayload;
 import com.funtimeevents.sdk.model.HellMapPayload;
 import com.funtimeevents.sdk.model.MinePlayersAroundPayload;
 import com.funtimeevents.sdk.model.EventCoordinatesPayload;
+import com.funtimeevents.sdk.model.PlayersListResponse;
 import com.funtimeevents.sdk.model.TabPlayersPayload;
 import com.funtimeevents.sdk.spi.PayloadSender;
 import com.funtimeevents.sdk.util.FteLogger;
@@ -71,12 +74,14 @@ public final class ApiClient implements PayloadSender {
         return getJson("/mines", params);
     }
 
-    public CompletableFuture<String> getPlayers(Map<String, String> params) {
-        return getJson("/players", params);
+    public CompletableFuture<PlayersListResponse> getPlayers(Map<String, String> params) {
+        return getJson("/players", params)
+                .thenApply(json -> json != null ? GSON.fromJson(json, PlayersListResponse.class) : null);
     }
 
-    public CompletableFuture<String> getBans(Map<String, String> params) {
-        return getJson("/bans", params);
+    public CompletableFuture<BansListResponse> getBans(Map<String, String> params) {
+        return getJson("/bans", params)
+                .thenApply(json -> json != null ? GSON.fromJson(json, BansListResponse.class) : null);
     }
 
     public CompletableFuture<String> getCopperDungeon() {
@@ -85,6 +90,11 @@ public final class ApiClient implements PayloadSender {
 
     public CompletableFuture<String> getWardenCity() {
         return getJson("/warden-city", Map.of());
+    }
+
+    public CompletableFuture<CaptchaResponse> solveCaptcha(String base64) {
+        return postJsonForResponse("/captcha", new CaptchaPayload(base64))
+                .thenApply(json -> json != null ? GSON.fromJson(json, CaptchaResponse.class) : null);
     }
 
     // --- SSE streams ---
@@ -97,7 +107,44 @@ public final class ApiClient implements PayloadSender {
         return stream("/mines/stream");
     }
 
+    public CompletableFuture<HttpResponse<java.io.InputStream>> streamCopperDungeons() {
+        return stream("/copper-dungeon/stream");
+    }
+
+    public CompletableFuture<HttpResponse<java.io.InputStream>> streamWardenCities() {
+        return stream("/warden-city/stream");
+    }
+
     // --- Internal ---
+
+    private CompletableFuture<String> postJsonForResponse(String path, Object body) {
+        String json = GSON.toJson(body);
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(baseUrl + path))
+                    .header("Content-Type", "application/json")
+                    .header("X-API-Key", apiKey)
+                    .header("User-Agent", userAgent)
+                    .timeout(TIMEOUT)
+                    .POST(HttpRequest.BodyPublishers.ofString(json))
+                    .build();
+
+            return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply(response -> {
+                        if (response.statusCode() >= 400) {
+                            FteLogger.warn("HTTP " + response.statusCode() + " from " + path + ": " + response.body());
+                        }
+                        return response.body();
+                    })
+                    .exceptionally(ex -> {
+                        FteLogger.warn("Network error from " + path + ": " + ex.getMessage());
+                        return null;
+                    });
+        } catch (Exception e) {
+            FteLogger.warn("Failed to POST " + path + ": " + e.getMessage());
+            return CompletableFuture.completedFuture(null);
+        }
+    }
 
     private void postJson(String path, Object body) {
         String json = GSON.toJson(body);

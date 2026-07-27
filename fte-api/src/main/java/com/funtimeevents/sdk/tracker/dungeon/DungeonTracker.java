@@ -7,9 +7,9 @@ import com.funtimeevents.sdk.spi.PayloadSender;
 import com.funtimeevents.sdk.tracker.Tracker;
 import com.funtimeevents.sdk.tracker.tabheader.TabHeaderTracker;
 import com.funtimeevents.sdk.util.FteLogger;
+import com.funtimeevents.sdk.util.PlayerNameUtil;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
@@ -126,7 +126,7 @@ public final class DungeonTracker implements Tracker {
             }
 
             String name = player.getGameProfile().getName();
-            String donate = extractDonate(player);
+            String donate = PlayerNameUtil.extractDonate(player);
             String helmet = itemName(player.getEquippedStack(EquipmentSlot.HEAD));
             String chestplate = itemName(player.getEquippedStack(EquipmentSlot.CHEST));
             String leggings = itemName(player.getEquippedStack(EquipmentSlot.LEGS));
@@ -202,22 +202,6 @@ public final class DungeonTracker implements Tracker {
         }
         var id = Registries.ITEM.getId(stack.getItem());
         return id.getPath();
-    }
-
-    private String extractDonate(PlayerEntity player) {
-        var handler = MinecraftClient.getInstance().getNetworkHandler();
-        if (handler != null) {
-            PlayerListEntry entry = handler.getPlayerListEntry(player.getUuid());
-            if (entry != null && entry.getDisplayName() != null) {
-                String displayName = entry.getDisplayName().getString();
-                String profileName = player.getGameProfile().getName();
-                if (displayName.length() > profileName.length() && displayName.contains(profileName)) {
-                    return displayName.substring(0, displayName.indexOf(profileName)).trim();
-                }
-                return displayName;
-            }
-        }
-        return "";
     }
 
     private Zone findZone(int x, int z) {

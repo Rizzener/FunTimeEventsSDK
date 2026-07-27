@@ -16,6 +16,7 @@ public final class FteConfig {
     private final boolean coordinatesEnabled;
     private final int tickIntervalTicks;
     private final boolean offlineMode;
+    private final boolean wsMode;
 
     FteConfig(Builder builder) {
         this.baseUrl = builder.baseUrl;
@@ -30,6 +31,7 @@ public final class FteConfig {
         this.coordinatesEnabled = builder.coordinatesEnabled;
         this.tickIntervalTicks = builder.tickIntervalTicks;
         this.offlineMode = builder.offlineMode;
+        this.wsMode = builder.wsMode;
     }
 
     public String baseUrl() { return baseUrl; }
@@ -44,9 +46,10 @@ public final class FteConfig {
     public boolean coordinatesEnabled() { return coordinatesEnabled; }
     public int tickIntervalTicks() { return tickIntervalTicks; }
     public boolean offlineMode() { return offlineMode; }
+    public boolean wsMode() { return wsMode; }
 
     public static final class Builder {
-        String baseUrl = "https://api.funtimeevents.su/v1";
+        String baseUrl = "https://api.knoxnet.space/v1/";
         String apiKey;
         String userAgent;
         LogLevel logLevel = LogLevel.INFO;
@@ -58,6 +61,7 @@ public final class FteConfig {
         boolean coordinatesEnabled = true;
         int tickIntervalTicks = 200;
         boolean offlineMode;
+        boolean wsMode = true;
 
         public Builder userAgent(String userAgent) {
             this.userAgent = userAgent; return this;
@@ -94,6 +98,10 @@ public final class FteConfig {
         }
         public Builder offlineMode() {
             this.offlineMode = true; return this;
+        }
+
+        public Builder disableWebSocket() {
+            this.wsMode = false; return this;
         }
 
         public FunTimeEventsAPI build() {
