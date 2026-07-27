@@ -5,6 +5,7 @@ import com.funtimeevents.sdk.spi.PayloadSender;
 import com.funtimeevents.sdk.tracker.Tracker;
 import com.funtimeevents.sdk.tracker.tabheader.TabHeaderTracker;
 import com.funtimeevents.sdk.util.FteLogger;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
 
@@ -17,15 +18,25 @@ import java.util.regex.Pattern;
 public final class HellMapTracker implements Tracker {
 
     private static final Pattern HELL_PATTERN = Pattern.compile("Адская резня - Осталось мобов:\\s*(\\d+)");
+    private static final int TICK_INTERVAL = 100; // 5 seconds
 
     private static volatile Field bossBarsField;
     private static volatile Method getNameMethod;
 
     private final PayloadSender sender;
-    private boolean active;
+    private volatile boolean active;
+    private int tickCounter;
 
     public HellMapTracker(PayloadSender sender) {
         this.sender = sender;
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (!active || TabHeaderTracker.getInstance() == null) return;
+            tickCounter++;
+            if (tickCounter >= TICK_INTERVAL) {
+                tickCounter = 0;
+                doScan();
+            }
+        });
     }
 
     private static Field resolveBossBarsField() {
@@ -54,6 +65,7 @@ public final class HellMapTracker implements Tracker {
     @Override
     public void start() {
         active = true;
+        tickCounter = 0;
     }
 
     @Override
@@ -63,9 +75,10 @@ public final class HellMapTracker implements Tracker {
 
     @Override
     public void tick() {
-        if (!active) {
-            return;
-        }
+        // scanning is triggered by ClientTickEvents at 5s intervals
+    }
+
+    private void doScan() {
         TabHeaderTracker header = TabHeaderTracker.getInstance();
         if (!header.isOnFuntime()) {
             return;

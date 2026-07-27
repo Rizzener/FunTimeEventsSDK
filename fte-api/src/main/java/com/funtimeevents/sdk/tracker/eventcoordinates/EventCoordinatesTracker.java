@@ -19,7 +19,7 @@ public final class EventCoordinatesTracker implements Tracker {
             "Появился на координатах\\s+\\[?(-?\\d+)\\s+(-?\\d+)\\s+(-?\\d+)\\]?");
 
     private final PayloadSender sender;
-    private boolean active;
+    private volatile boolean active;
 
     public EventCoordinatesTracker(PayloadSender sender) {
         this.sender = sender;

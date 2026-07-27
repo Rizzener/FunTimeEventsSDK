@@ -30,7 +30,7 @@ public final class RelayClient implements PayloadSender {
     private final String apiKey;
     private final String userAgent;
     private RelayCache cache;
-    private WebSocket webSocket;
+    private volatile WebSocket webSocket;
     private volatile boolean authenticated;
     private final Queue<String> pending = new ConcurrentLinkedQueue<>();
     private volatile boolean running = true;

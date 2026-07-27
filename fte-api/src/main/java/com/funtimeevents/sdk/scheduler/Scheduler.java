@@ -4,8 +4,8 @@ public final class Scheduler {
 
     private final int intervalTicks;
     private int tickCounter;
-    private boolean running;
-    private Runnable task;
+    private volatile boolean running;
+    private volatile Runnable task;
 
     public Scheduler(int intervalTicks) {
         this.intervalTicks = Math.max(1, intervalTicks);

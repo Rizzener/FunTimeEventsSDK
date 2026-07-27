@@ -23,7 +23,7 @@ public final class BanTracker implements Tracker {
     private static final Pattern HOVER_SERVER_PATTERN = Pattern.compile("Сервер:\\s*(.+)");
 
     private final PayloadSender sender;
-    private boolean active;
+    private volatile boolean active;
 
     public BanTracker(PayloadSender sender) {
         this.sender = sender;

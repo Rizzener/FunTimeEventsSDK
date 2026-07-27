@@ -7,7 +7,7 @@ import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 
 public final class ChatTracker implements Tracker {
 
-    private boolean active;
+    private volatile boolean active;
 
     public ChatTracker() {
         ClientReceiveMessageEvents.CHAT.register((message, signedMessage, sender, params, receptionTimestamp) -> {

@@ -25,7 +25,7 @@ import java.util.function.Consumer;
 
 public final class FunTimeEventsAPI {
 
-    private static FunTimeEventsAPI instance;
+    private static volatile FunTimeEventsAPI instance;
     private static ApiClient restClient;
     private static RelayClient wsClient;
     private static SseCache<EventResponse> eventCache;
@@ -46,51 +46,57 @@ public final class FunTimeEventsAPI {
             FteLogger.warn("SDK already initialized, ignoring duplicate call");
             return instance;
         }
-        FteConfig config = new FteConfig(configBuilder);
-
-        if (config.userAgent() == null || config.userAgent().isBlank()) {
-            throw new IllegalArgumentException("userAgent is required");
-        }
-        if (!config.offlineMode() && (config.apiKey() == null || config.apiKey().isBlank())) {
-            throw new IllegalArgumentException("apiKey is required in online mode");
-        }
-
-        FteLogger.setLevel(config.logLevel());
-
-        PayloadSender sender = null;
-        if (!config.offlineMode()) {
-            restClient = new ApiClient(config.baseUrl(), config.apiKey(), config.userAgent());
-
-            if (config.wsMode()) {
-                String rawUrl = config.baseUrl();
-                if (rawUrl.endsWith("/")) rawUrl = rawUrl.substring(0, rawUrl.length() - 1);
-                String wsUrl = rawUrl
-                        .replace("https://", "wss://")
-                        .replace("http://", "ws://") + "/relay";
-                wsClient = new RelayClient(wsUrl, config.apiKey(), config.userAgent());
-                relayCache = new RelayCache();
-                wsClient.setCache(relayCache);
-                wsClient.connect();
-                sender = wsClient;
-            } else {
-                sender = restClient;
-                eventCache = new SseCache<>("FTE-EventStream", EventResponse.class, EventResponse::name);
-                eventCache.start(restClient.streamEvents());
-                mineCache = new SseCache<>("FTE-MineStream", MineResponse.class, m -> m.serverId() + "_" + m.rarity());
-                mineCache.start(restClient.streamMines());
-                copperCache = new SseCache<>("FTE-CopperStream", LootAreaResponse.class, l -> String.valueOf(l.serverId()));
-                copperCache.start(restClient.streamCopperDungeons());
-                wardenCache = new SseCache<>("FTE-WardenStream", LootAreaResponse.class, l -> String.valueOf(l.serverId()));
-                wardenCache.start(restClient.streamWardenCities());
+        synchronized (FunTimeEventsAPI.class) {
+            if (instance != null) {
+                FteLogger.warn("SDK already initialized, ignoring duplicate call");
+                return instance;
             }
-        }
+            FteConfig config = new FteConfig(configBuilder);
 
-        TrackerManager trackerManager = new TrackerManager(sender, config);
-        FteLogger.info("SDK initialized" + (config.offlineMode() ? " (offline mode)" : "")
-                + (config.wsMode() ? " (WSS relay)" : ""));
-        Bootstrap.getInstance().start(trackerManager, config);
-        instance = new FunTimeEventsAPI();
-        return instance;
+            if (config.userAgent() == null || config.userAgent().isBlank()) {
+                throw new IllegalArgumentException("userAgent is required");
+            }
+            if (!config.offlineMode() && (config.apiKey() == null || config.apiKey().isBlank())) {
+                throw new IllegalArgumentException("apiKey is required in online mode");
+            }
+
+            FteLogger.setLevel(config.logLevel());
+
+            PayloadSender sender = null;
+            if (!config.offlineMode()) {
+                restClient = new ApiClient(config.baseUrl(), config.apiKey(), config.userAgent());
+
+                if (config.wsMode()) {
+                    String rawUrl = config.baseUrl();
+                    if (rawUrl.endsWith("/")) rawUrl = rawUrl.substring(0, rawUrl.length() - 1);
+                    String wsUrl = rawUrl
+                            .replace("https://", "wss://")
+                            .replace("http://", "ws://") + "/relay";
+                    wsClient = new RelayClient(wsUrl, config.apiKey(), config.userAgent());
+                    relayCache = new RelayCache();
+                    wsClient.setCache(relayCache);
+                    wsClient.connect();
+                    sender = wsClient;
+                } else {
+                    sender = restClient;
+                    eventCache = new SseCache<>("FTE-EventStream", EventResponse.class, EventResponse::name);
+                    eventCache.start(restClient.streamEvents());
+                    mineCache = new SseCache<>("FTE-MineStream", MineResponse.class, m -> m.serverId() + "_" + m.rarity());
+                    mineCache.start(restClient.streamMines());
+                    copperCache = new SseCache<>("FTE-CopperStream", LootAreaResponse.class, l -> String.valueOf(l.serverId()));
+                    copperCache.start(restClient.streamCopperDungeons());
+                    wardenCache = new SseCache<>("FTE-WardenStream", LootAreaResponse.class, l -> String.valueOf(l.serverId()));
+                    wardenCache.start(restClient.streamWardenCities());
+                }
+            }
+
+            TrackerManager trackerManager = new TrackerManager(sender, config);
+            FteLogger.info("SDK initialized" + (config.offlineMode() ? " (offline mode)" : "")
+                    + (config.wsMode() ? " (WSS relay)" : ""));
+            Bootstrap.getInstance().start(trackerManager, config);
+            instance = new FunTimeEventsAPI();
+            return instance;
+        }
     }
 
     // --- Local EventBus ---

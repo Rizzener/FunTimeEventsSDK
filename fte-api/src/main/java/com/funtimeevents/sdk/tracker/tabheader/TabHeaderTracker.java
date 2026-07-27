@@ -7,9 +7,9 @@ public final class TabHeaderTracker implements Tracker {
 
     private static final TabHeaderTracker INSTANCE = new TabHeaderTracker();
 
-    private int serverId = -1;
-    private String serverIp;
-    private boolean onFuntime;
+    private volatile int serverId = -1;
+    private volatile String serverIp;
+    private volatile boolean onFuntime;
     private final String serverType = "anarchy";
 
     private TabHeaderTracker() {

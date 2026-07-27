@@ -14,8 +14,8 @@ public final class Bootstrap {
 
     private TrackerManager trackerManager;
     private Scheduler scheduler;
-    private boolean running;
-    private boolean started;
+    private volatile boolean running;
+    private volatile boolean started;
 
     private Bootstrap() {
     }
