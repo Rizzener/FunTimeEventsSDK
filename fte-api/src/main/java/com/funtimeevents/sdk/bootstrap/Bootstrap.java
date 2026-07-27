@@ -1,5 +1,6 @@
 package com.funtimeevents.sdk.bootstrap;
 
+import com.funtimeevents.sdk.api.FteConfig;
 import com.funtimeevents.sdk.scheduler.Scheduler;
 import com.funtimeevents.sdk.tracker.TrackerManager;
 import com.funtimeevents.sdk.util.FteLogger;
@@ -11,20 +12,26 @@ public final class Bootstrap {
 
     private static final Bootstrap INSTANCE = new Bootstrap();
 
-    private final TrackerManager trackerManager;
-    private final Scheduler scheduler;
+    private TrackerManager trackerManager;
+    private Scheduler scheduler;
     private boolean running;
+    private boolean started;
 
     private Bootstrap() {
-        this.trackerManager = new TrackerManager();
-        this.scheduler = new Scheduler();
     }
 
     public static Bootstrap getInstance() {
         return INSTANCE;
     }
 
-    public void start() {
+    public void start(TrackerManager trackerManager, FteConfig config) {
+        if (started) {
+            return;
+        }
+        started = true;
+        this.trackerManager = trackerManager;
+        this.scheduler = new Scheduler(config.tickIntervalTicks());
+
         MinecraftClient client = MinecraftClient.getInstance();
         if (client == null) {
             FteLogger.error("MinecraftClient not available — is Fabric loaded?");

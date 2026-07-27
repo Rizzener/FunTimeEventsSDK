@@ -1,9 +1,9 @@
 package com.funtimeevents.sdk.tracker.ban;
 
-import com.funtimeevents.sdk.api.FunTimeEventsAPI;
 import com.funtimeevents.sdk.event.BanDetectedEvent;
 import com.funtimeevents.sdk.event.EventBus;
 import com.funtimeevents.sdk.model.BanPayload;
+import com.funtimeevents.sdk.spi.PayloadSender;
 import com.funtimeevents.sdk.tracker.Tracker;
 import com.funtimeevents.sdk.tracker.tabheader.TabHeaderTracker;
 import com.funtimeevents.sdk.util.FteLogger;
@@ -22,10 +22,12 @@ public final class BanTracker implements Tracker {
     private static final Pattern HOVER_END_PATTERN = Pattern.compile("(?:До|Наказание|Бан до|Окончание):\\s*(.+)");
     private static final Pattern HOVER_SERVER_PATTERN = Pattern.compile("Сервер:\\s*(.+)");
 
+    private final PayloadSender sender;
     private boolean active;
 
-    public BanTracker() {
-        ClientReceiveMessageEvents.CHAT.register((message, signedMessage, sender, params, receptionTimestamp) -> {
+    public BanTracker(PayloadSender sender) {
+        this.sender = sender;
+        ClientReceiveMessageEvents.CHAT.register((message, signedMessage, s, params, receptionTimestamp) -> {
             if (!active || !TabHeaderTracker.getInstance().isOnFuntime()) {
                 return;
             }
@@ -62,7 +64,7 @@ public final class BanTracker implements Tracker {
         String serverType = header.getServerType();
 
         BanPayload payload = new BanPayload(serverId, serverType, playerName, reason, end);
-        FunTimeEventsAPI.sendBan(payload);
+        sender.sendBan(payload);
     }
 
     private String extractHoverText(Text message) {
@@ -80,7 +82,8 @@ public final class BanTracker implements Tracker {
                         return Optional.of(hoverText.getString());
                     }
                 }
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                FteLogger.debug("Hover text extraction failed: " + e.getMessage());
             }
         }
         for (Text sibling : component.getSiblings()) {

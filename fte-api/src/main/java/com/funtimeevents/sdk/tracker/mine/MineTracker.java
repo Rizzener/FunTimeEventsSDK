@@ -1,8 +1,8 @@
 package com.funtimeevents.sdk.tracker.mine;
 
-import com.funtimeevents.sdk.api.FunTimeEventsAPI;
 import com.funtimeevents.sdk.model.MinePlayersAroundPayload;
 import com.funtimeevents.sdk.model.TabPlayer;
+import com.funtimeevents.sdk.spi.PayloadSender;
 import com.funtimeevents.sdk.tracker.Tracker;
 import com.funtimeevents.sdk.tracker.tabheader.TabHeaderTracker;
 import com.funtimeevents.sdk.util.FteLogger;
@@ -21,6 +21,12 @@ public final class MineTracker implements Tracker {
     private static final double RADIUS = 15.0;
     private static final double RADIUS_SQ = RADIUS * RADIUS;
     private static final String LOBBY_WORLD = "minecraft:lobby";
+
+    private final PayloadSender sender;
+
+    public MineTracker(PayloadSender sender) {
+        this.sender = sender;
+    }
 
     @Override
     public void start() {
@@ -67,7 +73,7 @@ public final class MineTracker implements Tracker {
         if (!playersAround.isEmpty()) {
             FteLogger.info("Mine lobby: " + playersAround.size() + " players around spawn");
             var payload = new MinePlayersAroundPayload(header.getServerId(), header.getServerType(), playersAround);
-            FunTimeEventsAPI.sendMinePlayers(payload);
+            sender.sendMinePlayers(payload);
         }
     }
 

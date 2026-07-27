@@ -1,8 +1,8 @@
 package com.funtimeevents.sdk.tracker.spawn;
 
-import com.funtimeevents.sdk.api.FunTimeEventsAPI;
 import com.funtimeevents.sdk.model.SpawnCoordinates;
 import com.funtimeevents.sdk.model.SpawnEventPayload;
+import com.funtimeevents.sdk.spi.PayloadSender;
 import com.funtimeevents.sdk.tracker.Tracker;
 import com.funtimeevents.sdk.tracker.tabheader.TabHeaderTracker;
 import com.funtimeevents.sdk.util.FteLogger;
@@ -15,11 +15,14 @@ public final class SpawnEventTracker implements Tracker {
 
     private static final Pattern EVENT_PATTERN = Pattern.compile("\\|\\|\\|\\s+\\[(.+?)\\]\\s+\\|\\|\\|");
     private static final Pattern LEVEL_PATTERN = Pattern.compile("Уровень лута:\\s*(.+)");
-    private static final Pattern COORDS_PATTERN = Pattern.compile("Появился на координатах\\s+\\[?([\\-\\d]+)\\s+([\\-\\d]+)\\s+([\\-\\d]+)\\]?");
+    private static final Pattern COORDS_PATTERN = Pattern.compile(
+            "Появился на координатах\\s+\\[?(-?\\d+)\\s+(-?\\d+)\\s+(-?\\d+)\\]?");
 
+    private final PayloadSender sender;
     private boolean active;
 
-    public SpawnEventTracker() {
+    public SpawnEventTracker(PayloadSender sender) {
+        this.sender = sender;
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
             if (!active || !TabHeaderTracker.getInstance().isOnFuntime()) {
                 return;
@@ -41,9 +44,13 @@ public final class SpawnEventTracker implements Tracker {
         Matcher coordsMatcher = COORDS_PATTERN.matcher(text);
         Integer x = null, y = null, z = null;
         if (coordsMatcher.find()) {
-            x = Integer.parseInt(coordsMatcher.group(1));
-            y = Integer.parseInt(coordsMatcher.group(2));
-            z = Integer.parseInt(coordsMatcher.group(3));
+            try {
+                x = Integer.parseInt(coordsMatcher.group(1));
+                y = Integer.parseInt(coordsMatcher.group(2));
+                z = Integer.parseInt(coordsMatcher.group(3));
+            } catch (NumberFormatException e) {
+                FteLogger.debug("Failed to parse coords: " + coordsMatcher.group());
+            }
         }
 
         FteLogger.info("Spawn event: " + eventName + " level=" + level + " coords=[" + x + ", " + y + ", " + z + "]");
@@ -54,7 +61,7 @@ public final class SpawnEventTracker implements Tracker {
                 eventName, level,
                 new SpawnCoordinates(x, y, z)
         );
-        FunTimeEventsAPI.sendSpawnEvent(payload);
+        sender.sendSpawnEvent(payload);
     }
 
     @Override

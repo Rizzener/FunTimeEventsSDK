@@ -1,7 +1,7 @@
 package com.funtimeevents.sdk.tracker.hell;
 
-import com.funtimeevents.sdk.api.FunTimeEventsAPI;
 import com.funtimeevents.sdk.model.HellMapPayload;
+import com.funtimeevents.sdk.spi.PayloadSender;
 import com.funtimeevents.sdk.tracker.Tracker;
 import com.funtimeevents.sdk.tracker.tabheader.TabHeaderTracker;
 import com.funtimeevents.sdk.util.FteLogger;
@@ -21,7 +21,12 @@ public final class HellMapTracker implements Tracker {
     private static volatile Field bossBarsField;
     private static volatile Method getNameMethod;
 
+    private final PayloadSender sender;
     private boolean active;
+
+    public HellMapTracker(PayloadSender sender) {
+        this.sender = sender;
+    }
 
     private static Field resolveBossBarsField() {
         if (bossBarsField != null) return bossBarsField;
@@ -101,7 +106,7 @@ public final class HellMapTracker implements Tracker {
             FteLogger.info("HellMap: mobs_count=" + mobsCount + " text=" + text);
 
             HellMapPayload payload = new HellMapPayload(header.getServerId(), header.getServerType(), mobsCount);
-            FunTimeEventsAPI.sendHellMap(payload);
+            sender.sendHellMap(payload);
             return;
         }
     }

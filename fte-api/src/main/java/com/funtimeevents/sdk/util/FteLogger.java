@@ -1,24 +1,42 @@
 package com.funtimeevents.sdk.util;
 
+import com.funtimeevents.sdk.api.FteConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public final class FteLogger {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("FTE");
+    private static volatile FteConfig.LogLevel logLevel = FteConfig.LogLevel.INFO;
 
     private FteLogger() {
     }
 
+    public static void setLevel(FteConfig.LogLevel level) {
+        logLevel = level;
+    }
+
+    public static void debug(String msg) {
+        if (logLevel.ordinal() >= FteConfig.LogLevel.DEBUG.ordinal()) {
+            LOGGER.info("[FTE] {}", msg);
+        }
+    }
+
     public static void info(String msg) {
-        LOGGER.info("[FTE] {}", msg);
+        if (logLevel.ordinal() >= FteConfig.LogLevel.INFO.ordinal()) {
+            LOGGER.info("[FTE] {}", msg);
+        }
     }
 
     public static void warn(String msg) {
-        LOGGER.warn("[FTE] {}", msg);
+        if (logLevel.ordinal() >= FteConfig.LogLevel.WARN.ordinal()) {
+            LOGGER.warn("[FTE] {}", msg);
+        }
     }
 
     public static void error(String msg) {
-        LOGGER.error("[FTE] {}", msg);
+        if (logLevel.ordinal() >= FteConfig.LogLevel.ERROR.ordinal()) {
+            LOGGER.error("[FTE] {}", msg);
+        }
     }
 }

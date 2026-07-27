@@ -1,7 +1,8 @@
 package com.funtimeevents.sdk.tracker;
 
-import com.funtimeevents.sdk.api.FunTimeEventsAPI;
+import com.funtimeevents.sdk.api.FteConfig;
 import com.funtimeevents.sdk.model.TabPlayersPayload;
+import com.funtimeevents.sdk.spi.PayloadSender;
 import com.funtimeevents.sdk.tracker.ban.BanTracker;
 import com.funtimeevents.sdk.tracker.chat.ChatTracker;
 import com.funtimeevents.sdk.tracker.dungeon.DungeonTracker;
@@ -18,17 +19,33 @@ public final class TrackerManager {
 
     private final List<Tracker> trackers = new CopyOnWriteArrayList<>();
     private final TabTracker tabTracker;
+    private final PayloadSender sender;
 
-    public TrackerManager() {
-        tabTracker = new TabTracker();
+    public TrackerManager(PayloadSender sender, FteConfig config) {
+        this.sender = sender;
         trackers.add(TabHeaderTracker.getInstance());
         trackers.add(new ChatTracker());
-        trackers.add(tabTracker);
-        trackers.add(new BanTracker());
-        trackers.add(new DungeonTracker());
-        trackers.add(new HellMapTracker());
-        trackers.add(new MineTracker());
-        trackers.add(new SpawnEventTracker());
+
+        if (config.bansEnabled()) {
+            trackers.add(new BanTracker(sender));
+        }
+        if (config.spawnEnabled()) {
+            trackers.add(new SpawnEventTracker(sender));
+        }
+        if (config.dungeonEnabled()) {
+            trackers.add(new DungeonTracker(sender));
+        }
+        if (config.hellMapEnabled()) {
+            trackers.add(new HellMapTracker(sender));
+        }
+        if (config.mineEnabled()) {
+            trackers.add(new MineTracker(sender));
+        }
+
+        tabTracker = new TabTracker();
+        if (config.tabPlayersEnabled()) {
+            trackers.add(tabTracker);
+        }
     }
 
     public void startAll() {
@@ -60,6 +77,6 @@ public final class TrackerManager {
             return;
         }
         var payload = new TabPlayersPayload(header.getServerId(), header.getServerType(), players);
-        FunTimeEventsAPI.sendTabPlayers(payload);
+        sender.sendTabPlayers(payload);
     }
 }

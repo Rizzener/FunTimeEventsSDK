@@ -3,6 +3,7 @@ package com.funtimeevents.sdk.tracker.dungeon;
 import com.funtimeevents.sdk.model.ChestInfo;
 import com.funtimeevents.sdk.model.DungeonPayload;
 import com.funtimeevents.sdk.model.PlayerGearInfo;
+import com.funtimeevents.sdk.spi.PayloadSender;
 import com.funtimeevents.sdk.tracker.Tracker;
 import com.funtimeevents.sdk.tracker.tabheader.TabHeaderTracker;
 import com.funtimeevents.sdk.util.FteLogger;
@@ -36,6 +37,8 @@ public final class DungeonTracker implements Tracker {
 
     private static volatile java.lang.reflect.Method getTextMethod;
 
+    private final PayloadSender sender;
+
     private record Zone(String name, int minX, int maxX, int minZ, int maxZ, int minY, int maxY) {
         boolean contains(int x, int z) {
             return x >= minX && x <= maxX && z >= minZ && z <= maxZ;
@@ -44,6 +47,10 @@ public final class DungeonTracker implements Tracker {
         boolean contains(int x, int y, int z) {
             return contains(x, z) && y >= minY && y <= maxY;
         }
+    }
+
+    public DungeonTracker(PayloadSender sender) {
+        this.sender = sender;
     }
 
     @Override
@@ -92,20 +99,20 @@ public final class DungeonTracker implements Tracker {
             FteLogger.info("Dungeon " + zone.name + ": " + players.size() + " players, " + chests.size() + " chests");
 
             for (PlayerGearInfo p : players) {
-                FteLogger.info("  Player: " + p.playerName() + " donate=" + p.donate()
+                FteLogger.debug("  Player: " + p.playerName() + " donate=" + p.donate()
                         + " helm=" + p.helmet() + " chest=" + p.chestplate()
                         + " legs=" + p.leggings() + " boots=" + p.boots()
                         + " invis=" + p.isInvisible());
             }
             for (ChestInfo c : chests) {
-                FteLogger.info("  Chest: [" + c.x() + ", " + c.y() + ", " + c.z() + "] time_left=" + c.timeLeft() + "s");
+                FteLogger.debug("  Chest: [" + c.x() + ", " + c.y() + ", " + c.z() + "] time_left=" + c.timeLeft() + "s");
             }
 
             DungeonPayload payload = new DungeonPayload(serverId, serverType, chests, players);
             if (zone == COPPER_ZONE) {
-                DungeonBroadcaster.publishCopper(payload);
+                sender.sendCopperDungeon(payload);
             } else {
-                DungeonBroadcaster.publishWarden(payload);
+                sender.sendWardenCity(payload);
             }
         }
     }
@@ -176,9 +183,11 @@ public final class DungeonTracker implements Tracker {
                 if (getTextMethod == null) {
                     getTextMethod = entity.getClass().getMethod("getText");
                 }
-                var result = getTextMethod.invoke(entity);
-                if (result instanceof Text text) {
-                    return text.getString().trim();
+                if (getTextMethod != null) {
+                    var result = getTextMethod.invoke(entity);
+                    if (result instanceof Text text) {
+                        return text.getString().trim();
+                    }
                 }
             } catch (Exception ignored) {
             }
