@@ -5,6 +5,7 @@ import com.funtimeevents.sdk.model.LootAreaResponse;
 import com.funtimeevents.sdk.model.MineResponse;
 import com.funtimeevents.sdk.model.Snapshot;
 import com.funtimeevents.sdk.model.SystemInfo;
+import com.funtimeevents.sdk.util.FteLogger;
 import com.funtimeevents.sdk.util.GsonHolder;
 import com.google.gson.Gson;
 
@@ -60,7 +61,8 @@ public final class RelayCache {
             if (snapshot.systemInfo() != null) {
                 systemInfo = snapshot.systemInfo();
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            FteLogger.warn("RelayCache failed to parse snapshot: " + e.getMessage());
         }
     }
 
@@ -90,7 +92,6 @@ public final class RelayCache {
     }
 
     public SystemInfo getSystemInfo() {
-        if (isStale()) { systemInfo = null; }
         return systemInfo;
     }
 }

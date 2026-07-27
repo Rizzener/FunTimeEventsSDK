@@ -2,7 +2,15 @@ package com.funtimeevents.sdk.api;
 
 public final class FteConfig {
 
-    public enum LogLevel { OFF, ERROR, WARN, INFO, DEBUG }
+    public enum LogLevel {
+        OFF(0), ERROR(1), WARN(2), INFO(3), DEBUG(4);
+
+        public final int severity;
+
+        LogLevel(int severity) {
+            this.severity = severity;
+        }
+    }
 
     private final String baseUrl;
     private final String apiKey;
@@ -17,6 +25,7 @@ public final class FteConfig {
     private final int tickIntervalTicks;
     private final boolean offlineMode;
     private final boolean wsMode;
+    private final boolean compression;
 
     FteConfig(Builder builder) {
         this.baseUrl = builder.baseUrl;
@@ -32,6 +41,7 @@ public final class FteConfig {
         this.tickIntervalTicks = builder.tickIntervalTicks;
         this.offlineMode = builder.offlineMode;
         this.wsMode = builder.wsMode;
+        this.compression = builder.compression;
     }
 
     public String baseUrl() { return baseUrl; }
@@ -47,6 +57,7 @@ public final class FteConfig {
     public int tickIntervalTicks() { return tickIntervalTicks; }
     public boolean offlineMode() { return offlineMode; }
     public boolean wsMode() { return wsMode; }
+    public boolean compression() { return compression; }
 
     public static final class Builder {
         String baseUrl = "https://api.knoxnet.space/v1/";
@@ -62,6 +73,7 @@ public final class FteConfig {
         int tickIntervalTicks = 200;
         boolean offlineMode;
         boolean wsMode = true;
+        boolean compression = true;
 
         public Builder userAgent(String userAgent) {
             this.userAgent = userAgent; return this;
@@ -102,6 +114,10 @@ public final class FteConfig {
 
         public Builder disableWebSocket() {
             this.wsMode = false; return this;
+        }
+
+        public Builder disableCompression() {
+            this.compression = false; return this;
         }
 
         public FunTimeEventsAPI build() {

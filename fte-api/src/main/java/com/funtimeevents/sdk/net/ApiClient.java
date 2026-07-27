@@ -15,6 +15,7 @@ import com.funtimeevents.sdk.util.FteLogger;
 import com.funtimeevents.sdk.util.GsonHolder;
 import com.google.gson.Gson;
 
+import java.io.ByteArrayOutputStream;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -25,6 +26,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+import java.util.zip.GZIPOutputStream;
 
 public final class ApiClient implements PayloadSender {
 
@@ -34,12 +36,14 @@ public final class ApiClient implements PayloadSender {
     private final String baseUrl;
     private final String apiKey;
     private final String userAgent;
+    private final boolean useCompression;
     private final HttpClient httpClient;
 
-    public ApiClient(String baseUrl, String apiKey, String userAgent) {
+    public ApiClient(String baseUrl, String apiKey, String userAgent, boolean useCompression) {
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
         this.apiKey = apiKey;
         this.userAgent = userAgent;
+        this.useCompression = useCompression;
         this.httpClient = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(TIMEOUT)
@@ -118,14 +122,31 @@ public final class ApiClient implements PayloadSender {
     // --- Internal ---
 
     private HttpRequest buildPostRequest(String path, String json) {
-        return HttpRequest.newBuilder()
+        byte[] body = json.getBytes(StandardCharsets.UTF_8);
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl + path))
                 .header("Content-Type", "application/json")
                 .header("X-API-Key", apiKey)
                 .header("User-Agent", userAgent)
-                .timeout(TIMEOUT)
-                .POST(HttpRequest.BodyPublishers.ofString(json))
-                .build();
+                .timeout(TIMEOUT);
+        if (useCompression) {
+            body = gzip(body);
+            requestBuilder.header("Content-Encoding", "gzip");
+        }
+        return requestBuilder.POST(HttpRequest.BodyPublishers.ofByteArray(body)).build();
+    }
+
+    private static byte[] gzip(byte[] data) {
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            try (GZIPOutputStream gzipOut = new GZIPOutputStream(baos)) {
+                gzipOut.write(data);
+            }
+            return baos.toByteArray();
+        } catch (Exception e) {
+            FteLogger.warn("Gzip compression failed: " + e.getMessage());
+            return data;
+        }
     }
 
     private CompletableFuture<String> postJsonForResponse(String path, Object body) {

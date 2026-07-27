@@ -4,8 +4,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.entity.player.PlayerEntity;
 
-import java.util.UUID;
-
 public final class PlayerNameUtil {
 
     private PlayerNameUtil() {

@@ -19,9 +19,11 @@ public final class TrackerManager {
     private final List<Tracker> trackers = new CopyOnWriteArrayList<>();
     private final TabTracker tabTracker;
     private final PayloadSender sender;
+    private final boolean tabPlayersEnabled;
 
     public TrackerManager(PayloadSender sender, FteConfig config) {
         this.sender = sender;
+        this.tabPlayersEnabled = config.tabPlayersEnabled();
         trackers.add(TabHeaderTracker.getInstance());
 
         if (config.bansEnabled()) {
@@ -66,6 +68,9 @@ public final class TrackerManager {
     }
 
     private void assembleTabPlayersPayload() {
+        if (!tabPlayersEnabled) {
+            return;
+        }
         TabHeaderTracker header = TabHeaderTracker.getInstance();
         if (!header.isOnFuntime()) {
             return;

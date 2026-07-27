@@ -38,7 +38,7 @@ public final class RelayClient implements PayloadSender {
     private volatile boolean running = true;
     private Thread reconnectThread;
 
-    public RelayClient(String wsUrl, String apiKey, String userAgent) {
+    public RelayClient(String wsUrl, String apiKey, String userAgent, boolean useCompression) {
         this.wsUrl = wsUrl;
         this.apiKey = apiKey;
         this.userAgent = userAgent;
@@ -79,7 +79,8 @@ public final class RelayClient implements PayloadSender {
     private void doConnect() throws Exception {
         authenticated = false;
         FteLogger.info("Relay connecting to " + wsUrl + "...");
-        CountDownLatch latch = new CountDownLatch(1);
+        CountDownLatch authLatch = new CountDownLatch(1);
+        CountDownLatch closeLatch = new CountDownLatch(1);
         WebSocket.Builder builder = java.net.http.HttpClient.newHttpClient().newWebSocketBuilder();
         builder.header("User-Agent", userAgent);
         WebSocket ws = builder.buildAsync(URI.create(wsUrl), new WebSocket.Listener() {
@@ -99,7 +100,7 @@ public final class RelayClient implements PayloadSender {
                 if (last) {
                     String msg = buffer.toString();
                     buffer.setLength(0);
-                    processMessage(msg);
+                    processMessage(msg, authLatch);
                 }
                 return WebSocket.Listener.super.onText(ws, data, last);
             }
@@ -109,7 +110,8 @@ public final class RelayClient implements PayloadSender {
                 FteLogger.warn("Relay closed: " + statusCode + " " + reason);
                 webSocket = null;
                 authenticated = false;
-                latch.countDown();
+                closeLatch.countDown();
+                authLatch.countDown();
                 if (statusCode == 4001) {
                     FteLogger.error("Relay auth failed, not reconnecting");
                     running = false;
@@ -122,21 +124,30 @@ public final class RelayClient implements PayloadSender {
                 FteLogger.warn("Relay error: " + error.getMessage());
                 webSocket = null;
                 authenticated = false;
-                latch.countDown();
+                closeLatch.countDown();
+                authLatch.countDown();
                 WebSocket.Listener.super.onError(ws, error);
             }
         }).get();
 
-        latch.await(30, TimeUnit.SECONDS);  // блокируемся до onClose/onError или таймаута
+        // ждём auth_ok или таймаут 30s (если сервер не отвечает)
+        authLatch.await(30, TimeUnit.SECONDS);
+        if (!authenticated) {
+            FteLogger.warn("Relay auth timeout, reconnecting");
+            return;
+        }
+        // ждём разрыва соединения
+        closeLatch.await();
     }
 
-    private void processMessage(String msg) {
+    private void processMessage(String msg, CountDownLatch authLatch) {
         try {
             if (msg.contains("\"type\":\"snapshot\"")) {
                 if (cache != null) cache.updateFromSnapshot(msg);
             } else if (msg.contains("\"type\":\"auth_ok\"")) {
                 authenticated = true;
                 FteLogger.info("Relay authenticated");
+                authLatch.countDown();
                 flushPending();
             }
         } catch (Exception ignored) {

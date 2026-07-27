@@ -61,7 +61,7 @@ public final class FunTimeEventsAPI {
 
             PayloadSender sender = null;
             if (!config.offlineMode()) {
-                restClient = new ApiClient(config.baseUrl(), config.apiKey(), config.userAgent());
+                restClient = new ApiClient(config.baseUrl(), config.apiKey(), config.userAgent(), config.compression());
 
                 if (config.wsMode()) {
                     String rawUrl = config.baseUrl();
@@ -69,7 +69,7 @@ public final class FunTimeEventsAPI {
                     String wsUrl = rawUrl
                             .replace("https://", "wss://")
                             .replace("http://", "ws://") + "/relay";
-                    wsClient = new RelayClient(wsUrl, config.apiKey(), config.userAgent());
+                    wsClient = new RelayClient(wsUrl, config.apiKey(), config.userAgent(), config.compression());
                     relayCache = new RelayCache();
                     wsClient.setCache(relayCache);
                     wsClient.connect();

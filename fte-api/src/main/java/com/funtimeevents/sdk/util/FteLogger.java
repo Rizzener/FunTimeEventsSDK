@@ -17,25 +17,25 @@ public final class FteLogger {
     }
 
     public static void debug(String msg) {
-        if (logLevel.ordinal() >= FteConfig.LogLevel.DEBUG.ordinal()) {
+        if (logLevel.severity >= FteConfig.LogLevel.DEBUG.severity) {
             LOGGER.info("[FTE] {}", msg);
         }
     }
 
     public static void info(String msg) {
-        if (logLevel.ordinal() >= FteConfig.LogLevel.INFO.ordinal()) {
+        if (logLevel.severity >= FteConfig.LogLevel.INFO.severity) {
             LOGGER.info("[FTE] {}", msg);
         }
     }
 
     public static void warn(String msg) {
-        if (logLevel.ordinal() >= FteConfig.LogLevel.WARN.ordinal()) {
+        if (logLevel.severity >= FteConfig.LogLevel.WARN.severity) {
             LOGGER.warn("[FTE] {}", msg);
         }
     }
 
     public static void error(String msg) {
-        if (logLevel.ordinal() >= FteConfig.LogLevel.ERROR.ordinal()) {
+        if (logLevel.severity >= FteConfig.LogLevel.ERROR.severity) {
             LOGGER.error("[FTE] {}", msg);
         }
     }
