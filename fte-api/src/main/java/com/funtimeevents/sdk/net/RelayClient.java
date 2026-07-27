@@ -14,6 +14,7 @@ import com.funtimeevents.sdk.util.GsonHolder;
 import com.google.gson.Gson;
 
 import java.net.URI;
+import java.net.http.HttpClient;
 import java.net.http.WebSocket;
 import java.util.Map;
 import java.util.Queue;
@@ -21,19 +22,25 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public final class RelayClient implements PayloadSender {
 
     private static final Gson GSON = GsonHolder.INSTANCE;
     private static final int MAX_BACKOFF_SECONDS = 60;
+    private static final long IDLE_TIMEOUT_MS = 15_000;
 
     private final String wsUrl;
     private final String apiKey;
     private final String userAgent;
+    private final HttpClient httpClient;
+    private final ExecutorService ioExecutor;
     private RelayCache cache;
     private volatile WebSocket webSocket;
     private volatile boolean authenticated;
+    private volatile long lastSnapshotAt;
     private final Queue<String> pending = new ConcurrentLinkedQueue<>();
     private volatile boolean running = true;
     private Thread reconnectThread;
@@ -42,6 +49,12 @@ public final class RelayClient implements PayloadSender {
         this.wsUrl = wsUrl;
         this.apiKey = apiKey;
         this.userAgent = userAgent;
+        this.httpClient = HttpClient.newHttpClient();
+        this.ioExecutor = Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "FTE-Relay-IO");
+            t.setDaemon(true);
+            return t;
+        });
     }
 
     public void setCache(RelayCache cache) {
@@ -60,6 +73,7 @@ public final class RelayClient implements PayloadSender {
         if (webSocket != null) {
             try { webSocket.sendClose(WebSocket.NORMAL_CLOSURE, ""); } catch (Exception ignored) {}
         }
+        ioExecutor.shutdownNow();
     }
 
     private void connectLoop() {
@@ -78,10 +92,11 @@ public final class RelayClient implements PayloadSender {
 
     private void doConnect() throws Exception {
         authenticated = false;
+        lastSnapshotAt = System.currentTimeMillis();
         FteLogger.info("Relay connecting to " + wsUrl + "...");
         CountDownLatch authLatch = new CountDownLatch(1);
         CountDownLatch closeLatch = new CountDownLatch(1);
-        WebSocket.Builder builder = java.net.http.HttpClient.newHttpClient().newWebSocketBuilder();
+        WebSocket.Builder builder = httpClient.newWebSocketBuilder();
         builder.header("User-Agent", userAgent);
         WebSocket ws = builder.buildAsync(URI.create(wsUrl), new WebSocket.Listener() {
             final StringBuilder buffer = new StringBuilder();
@@ -130,27 +145,54 @@ public final class RelayClient implements PayloadSender {
             }
         }).get();
 
-        // ждём auth_ok или таймаут 30s (если сервер не отвечает)
-        authLatch.await(30, TimeUnit.SECONDS);
-        if (!authenticated) {
+        if (!authLatch.await(30, TimeUnit.SECONDS)) {
             FteLogger.warn("Relay auth timeout, reconnecting");
             return;
         }
-        // ждём разрыва соединения
+        if (!authenticated) {
+            FteLogger.warn("Relay auth rejected, reconnecting");
+            return;
+        }
+
+        Thread watchdog = new Thread(() -> {
+            try {
+                while (!closeLatch.await(1, TimeUnit.SECONDS)) {
+                    long idle = System.currentTimeMillis() - lastSnapshotAt;
+                    if (idle > IDLE_TIMEOUT_MS) {
+                        FteLogger.warn("Relay snapshot watchdog: no snapshots for " + (idle / 1000) + "s, aborting");
+                        try { ws.abort(); } catch (Exception ignored) {}
+                        webSocket = null;
+                        authenticated = false;
+                        closeLatch.countDown();
+                        break;
+                    }
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }, "FTE-Relay-Watchdog");
+        watchdog.setDaemon(true);
+        watchdog.start();
+
         closeLatch.await();
     }
 
     private void processMessage(String msg, CountDownLatch authLatch) {
         try {
-            if (msg.contains("\"type\":\"snapshot\"")) {
+            Map<String, Object> parsed = GSON.fromJson(msg, Map.class);
+            String type = (String) parsed.get("type");
+            if ("snapshot".equals(type)) {
+                lastSnapshotAt = System.currentTimeMillis();
                 if (cache != null) cache.updateFromSnapshot(msg);
-            } else if (msg.contains("\"type\":\"auth_ok\"")) {
+            } else if ("auth_ok".equals(type)) {
                 authenticated = true;
+                lastSnapshotAt = System.currentTimeMillis();
                 FteLogger.info("Relay authenticated");
                 authLatch.countDown();
                 flushPending();
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            FteLogger.warn("Relay failed to parse message: " + e.getMessage());
         }
     }
 
@@ -168,12 +210,14 @@ public final class RelayClient implements PayloadSender {
     }
 
     private void sendMessage(String type, Object body) {
-        String msg = GSON.toJson(Map.of("type", type, "body", body));
-        if (authenticated && webSocket != null) {
-            sendRaw(msg);
-        } else {
-            pending.add(msg);
-        }
+        ioExecutor.execute(() -> {
+            String msg = GSON.toJson(Map.of("type", type, "body", body));
+            if (authenticated && webSocket != null) {
+                sendRaw(msg);
+            } else {
+                pending.add(msg);
+            }
+        });
     }
 
     private void sleepSeconds(int seconds) {

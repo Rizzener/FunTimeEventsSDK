@@ -140,21 +140,29 @@ if (config.dungeonEnabled()) trackers.add(new DungeonTracker(sender));
 FunTimeEventsAPI.builder()
     .userAgent("ModName/1.0")       // REQUIRED
     .apiKey("sk-fte-...")           // REQUIRED in online mode
-    .baseUrl("https://host/v1/")    // default: api.knoxnet.space/v1/
+    .baseUrl("https://host/v1/")    // default: api.funtimeevents.su/v1/
     .logLevel(LogLevel.DEBUG)       // default: INFO
     .disableScanTabPlayers()        // disable individual trackers
     .disableWebSocket()             // opt-out of WSS, use REST-only
-    .tickIntervalSeconds(30)        // default: 10
+    .disableCompression()           // opt-out of HTTP gzip, send plain JSON
+    .tickIntervalSeconds(5)        // default: 10
     .build();
 ```
 
 Defaults:
 - `wsMode = true` (WSS relay for POST)
-- `baseUrl = "https://api.knoxnet.space/v1/"`
+- `compression = true` (gzip HTTP POST bodies, WSS always plain text)
+- `baseUrl = "https://api.funtimeevents.su/v1/"`
 - `tickIntervalSeconds = 10` (stored as 200 ticks)
 - All trackers enabled
 
 Validation: `userAgent` is required. `apiKey` is required when not offline. `baseUrl` defaults if not set.
+
+### Compression (.disableCompression())
+
+Gzip is applied ONLY to HTTP (ApiClient): `Content-Encoding: gzip` header + `GZIPOutputStream` body.
+WebSocket (RelayClient) does NOT use gzip — `sendBinary()` breaks Python backends (`KeyError: 'text'`).
+`.disableCompression()` disables gzip for HTTP, WSS is unaffected either way.
 
 ### WSS vs REST modes
 
@@ -180,6 +188,14 @@ Two-latch pattern:
 - `authLatch` — 30s timeout, waiting for auth_ok. If timeout → reconnect
 - `closeLatch` — no timeout, waiting for connection drop. Blocks until disconnect
 
+**Watchdog (silent disconnect protection):** `FTE-Relay-Watchdog` daemon thread polls every 1s via `closeLatch.await(1, SECONDS)`. If `System.currentTimeMillis() - lastSnapshotAt > 15000` (no snapshots for 15s), calls `ws.abort()` + manually cleans up `webSocket`/`authenticated` + `closeLatch.countDown()` to force reconnect. This handles NAT timeouts and firewall drops where `onClose`/`onError` are never called.
+
+**HttpClient reuse:** `HttpClient` is created once in constructor, reused across all reconnect attempts. Never use `HttpClient.newHttpClient()` inside `doConnect()`.
+
+**IO thread (off-Render):** `FTE-Relay-IO` single-thread executor. `sendMessage()` offloads `GSON.toJson()` serialization to this thread to avoid blocking the Render Thread. `disconnect()` calls `ioExecutor.shutdownNow()`.
+
+**JSON parsing:** `processMessage()` parses messages via `GSON.fromJson(msg, Map.class)` and checks the `type` field — NOT via `String.contains()`. This is tolerant of whitespace in JSON formatting.
+
 ---
 
 ## Thread safety
@@ -191,6 +207,7 @@ Critical locations:
 - `Bootstrap.running`, `Bootstrap.started` — written in join/leave events
 - `TabHeaderTracker.serverId`, `serverIp`, `onFuntime` — read from 6+ trackers across threads
 - `RelayClient.webSocket` — written in WebSocket callback thread, read in render thread
+- `RelayClient.lastSnapshotAt` — written in WebSocket listener thread, read in watchdog thread
 - `FunTimeEventsAPI.instance` — synchronized double-checked locking in `create()`
 - `Scheduler.running`, `Scheduler.task`
 
