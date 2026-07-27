@@ -47,7 +47,7 @@ public final class HellMapTracker implements Tracker {
             field.setAccessible(true);
             bossBarsField = field;
         } catch (Exception e) {
-            FteLogger.error("bossBars field not found: " + e.getMessage());
+            FteLogger.error(FteLogger.TRACK, "bossBars field not found: " + e.getMessage());
         }
         return bossBarsField;
     }
@@ -57,7 +57,7 @@ public final class HellMapTracker implements Tracker {
         try {
             getNameMethod = bar.getClass().getMethod("getName");
         } catch (Exception e) {
-            FteLogger.error("getName method not found: " + e.getMessage());
+            FteLogger.error(FteLogger.TRACK, "getName method not found: " + e.getMessage());
         }
         return getNameMethod;
     }
@@ -66,11 +66,13 @@ public final class HellMapTracker implements Tracker {
     public void start() {
         active = true;
         tickCounter = 0;
+        FteLogger.info(FteLogger.TRACK, "HellMapTracker started");
     }
 
     @Override
     public void stop() {
         active = false;
+        FteLogger.info(FteLogger.TRACK, "HellMapTracker stopped");
     }
 
     @Override
@@ -116,7 +118,7 @@ public final class HellMapTracker implements Tracker {
                 continue;
             }
             int mobsCount = Integer.parseInt(m.group(1));
-            FteLogger.info("HellMap: mobs_count=" + mobsCount + " text=" + text);
+            FteLogger.info(FteLogger.TRACK, "HellMap: mobs_count=" + mobsCount + " text=" + text);
 
             HellMapPayload payload = new HellMapPayload(header.getServerId(), header.getServerType(), mobsCount);
             sender.sendHellMap(payload);

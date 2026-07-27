@@ -33,10 +33,12 @@ public final class MineTracker implements Tracker {
 
     @Override
     public void start() {
+        FteLogger.info(FteLogger.TRACK, "MineTracker started");
     }
 
     @Override
     public void stop() {
+        FteLogger.info(FteLogger.TRACK, "MineTracker stopped");
     }
 
     @Override
@@ -85,7 +87,7 @@ public final class MineTracker implements Tracker {
         }
 
         if (!playersAround.isEmpty()) {
-            FteLogger.info("Mine lobby: " + playersAround.size() + " players around spawn");
+            FteLogger.info(FteLogger.TRACK, "Mine lobby: " + playersAround.size() + " players around spawn");
             var payload = new MinePlayersAroundPayload(header.getServerId(), header.getServerType(), playersAround);
             sender.sendMinePlayers(payload);
         }

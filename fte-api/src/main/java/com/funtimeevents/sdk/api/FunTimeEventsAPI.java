@@ -40,12 +40,12 @@ public final class FunTimeEventsAPI {
 
     static FunTimeEventsAPI create(FteConfig.Builder configBuilder) {
         if (instance != null) {
-            FteLogger.warn("SDK already initialized, ignoring duplicate call");
+            FteLogger.warn(FteLogger.CORE, "SDK already initialized, ignoring duplicate call");
             return instance;
         }
         synchronized (FunTimeEventsAPI.class) {
             if (instance != null) {
-                FteLogger.warn("SDK already initialized, ignoring duplicate call");
+                FteLogger.warn(FteLogger.CORE, "SDK already initialized, ignoring duplicate call");
                 return instance;
             }
             FteConfig config = new FteConfig(configBuilder);
@@ -88,8 +88,18 @@ public final class FunTimeEventsAPI {
             }
 
             TrackerManager trackerManager = new TrackerManager(sender, config);
-            FteLogger.info("SDK initialized" + (config.offlineMode() ? " (offline mode)" : "")
-                    + (config.wsMode() ? " (WSS relay)" : ""));
+            StringBuilder mode = new StringBuilder();
+            if (config.offlineMode()) mode.append(" offline");
+            if (config.wsMode()) mode.append(" wss"); else mode.append(" rest");
+            if (config.compression()) mode.append(" gzip");
+            if (mode.length() == 0) mode.append(" default");
+            FteLogger.info(FteLogger.CORE, "SDK initialized —" + mode
+                    + " — trackers {" + (config.tabPlayersEnabled() ? " tab" : "")
+                    + (config.bansEnabled() ? " bans" : "")
+                    + (config.dungeonEnabled() ? " dungeon" : "")
+                    + (config.hellMapEnabled() ? " hellmap" : "")
+                    + (config.mineEnabled() ? " mine" : "")
+                    + (config.coordinatesEnabled() ? " coords" : "") + " }");
             Bootstrap.getInstance().start(trackerManager, config);
             instance = new FunTimeEventsAPI();
             return instance;

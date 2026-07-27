@@ -49,11 +49,11 @@ public final class EventCoordinatesTracker implements Tracker {
                 y = Integer.parseInt(coordsMatcher.group(2));
                 z = Integer.parseInt(coordsMatcher.group(3));
             } catch (NumberFormatException e) {
-                FteLogger.debug("Failed to parse coords: " + coordsMatcher.group());
+                FteLogger.debug(FteLogger.TRACK, "Failed to parse coords: " + coordsMatcher.group());
             }
         }
 
-        FteLogger.info("Event coords: " + eventName + " level=" + level + " coords=[" + x + ", " + y + ", " + z + "]");
+        FteLogger.info(FteLogger.TRACK, "Event coords: " + eventName + " level=" + level + " coords=[" + x + ", " + y + ", " + z + "]");
 
         TabHeaderTracker header = TabHeaderTracker.getInstance();
         EventCoordinatesPayload payload = new EventCoordinatesPayload(
@@ -67,11 +67,13 @@ public final class EventCoordinatesTracker implements Tracker {
     @Override
     public void start() {
         active = true;
+        FteLogger.info(FteLogger.TRACK, "EventCoordinatesTracker started");
     }
 
     @Override
     public void stop() {
         active = false;
+        FteLogger.info(FteLogger.TRACK, "EventCoordinatesTracker stopped");
     }
 
     @Override

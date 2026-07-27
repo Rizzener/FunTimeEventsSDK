@@ -144,7 +144,7 @@ public final class ApiClient implements PayloadSender {
             }
             return baos.toByteArray();
         } catch (Exception e) {
-            FteLogger.warn("Gzip compression failed: " + e.getMessage());
+            FteLogger.warn(FteLogger.API, "gzip failed: " + e.getMessage());
             return data;
         }
     }
@@ -155,16 +155,16 @@ public final class ApiClient implements PayloadSender {
             return httpClient.sendAsync(buildPostRequest(path, json), HttpResponse.BodyHandlers.ofString())
                     .thenApply(response -> {
                         if (response.statusCode() >= 400) {
-                            FteLogger.warn("HTTP " + response.statusCode() + " from " + path + ": " + response.body());
+                            FteLogger.warn(FteLogger.API, "HTTP " + response.statusCode() + " " + path + ": " + response.body());
                         }
                         return response.body();
                     })
                     .exceptionally(ex -> {
-                        FteLogger.warn("Network error from " + path + ": " + ex.getMessage());
+                        FteLogger.warn(FteLogger.API, "Network error from " + path + ": " + ex.getMessage());
                         return null;
                     });
         } catch (Exception e) {
-            FteLogger.warn("Failed to POST " + path + ": " + e.getMessage());
+            FteLogger.warn(FteLogger.API, "Failed to POST " + path + ": " + e.getMessage());
             return CompletableFuture.completedFuture(null);
         }
     }
@@ -176,17 +176,17 @@ public final class ApiClient implements PayloadSender {
                     .thenAccept(response -> {
                         String responseBody = response.body();
                         if (response.statusCode() >= 400) {
-                            FteLogger.warn("HTTP " + response.statusCode() + " from " + path + ": " + responseBody);
+                            FteLogger.warn(FteLogger.API, "HTTP " + response.statusCode() + " " + path + ": " + responseBody);
                         } else {
-                            FteLogger.debug("POST " + path + " -> " + response.statusCode() + " " + responseBody);
+                            FteLogger.debug(FteLogger.API, "POST " + path + " -> " + response.statusCode() + " " + responseBody);
                         }
                     })
                     .exceptionally(ex -> {
-                        FteLogger.warn("Network error sending to " + path + ": " + ex.getMessage());
+                        FteLogger.warn(FteLogger.API, "Network error sending to " + path + ": " + ex.getMessage());
                         return null;
                     });
         } catch (Exception e) {
-            FteLogger.warn("Failed to send to " + path + ": " + e.getMessage());
+            FteLogger.warn(FteLogger.API, "Failed to send to " + path + ": " + e.getMessage());
         }
     }
 
@@ -210,16 +210,18 @@ public final class ApiClient implements PayloadSender {
             return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                     .thenApply(response -> {
                         if (response.statusCode() >= 400) {
-                            FteLogger.warn("HTTP " + response.statusCode() + " from " + path);
+                            FteLogger.warn(FteLogger.API, "HTTP " + response.statusCode() + " " + path);
+                        } else {
+                            FteLogger.debug(FteLogger.API, "GET " + path + " -> " + response.statusCode());
                         }
                         return response.body();
                     })
                     .exceptionally(ex -> {
-                        FteLogger.warn("Network error from " + path + ": " + ex.getMessage());
+                        FteLogger.warn(FteLogger.API, "Network error from " + path + ": " + ex.getMessage());
                         return null;
                     });
         } catch (Exception e) {
-            FteLogger.warn("Failed to GET " + path + ": " + e.getMessage());
+            FteLogger.warn(FteLogger.API, "Failed to GET " + path + ": " + e.getMessage());
             return CompletableFuture.completedFuture(null);
         }
     }
@@ -237,7 +239,7 @@ public final class ApiClient implements PayloadSender {
 
             return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofInputStream());
         } catch (Exception e) {
-            FteLogger.warn("Failed to stream " + path + ": " + e.getMessage());
+            FteLogger.warn(FteLogger.API, "Failed to stream " + path + ": " + e.getMessage());
             return CompletableFuture.failedFuture(e);
         }
     }

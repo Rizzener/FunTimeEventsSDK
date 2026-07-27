@@ -8,3 +8,5 @@ out/
 META-INF/
 
 *.zip
+version-test/
+test_*.py

@@ -55,10 +55,12 @@ public final class DungeonTracker implements Tracker {
 
     @Override
     public void start() {
+        FteLogger.info(FteLogger.TRACK, "DungeonTracker started");
     }
 
     @Override
     public void stop() {
+        FteLogger.info(FteLogger.TRACK, "DungeonTracker stopped");
     }
 
     @Override
@@ -96,16 +98,16 @@ public final class DungeonTracker implements Tracker {
         List<ChestInfo> chests = scanChests(world, zone);
 
         if (!players.isEmpty() || !chests.isEmpty()) {
-            FteLogger.info("Dungeon " + zone.name + ": " + players.size() + " players, " + chests.size() + " chests");
+            FteLogger.info(FteLogger.TRACK, "Dungeon " + zone.name + ": " + players.size() + " players, " + chests.size() + " chests");
 
             for (PlayerGearInfo p : players) {
-                FteLogger.debug("  Player: " + p.playerName() + " donate=" + p.donate()
+                FteLogger.debug(FteLogger.TRACK, "  Player: " + p.playerName() + " donate=" + p.donate()
                         + " helm=" + p.helmet() + " chest=" + p.chestplate()
                         + " legs=" + p.leggings() + " boots=" + p.boots()
                         + " invis=" + p.isInvisible());
             }
             for (ChestInfo c : chests) {
-                FteLogger.debug("  Chest: [" + c.x() + ", " + c.y() + ", " + c.z() + "] time_left=" + c.timeLeft() + "s");
+                FteLogger.debug(FteLogger.TRACK, "  Chest: [" + c.x() + ", " + c.y() + ", " + c.z() + "] time_left=" + c.timeLeft() + "s");
             }
 
             DungeonPayload payload = new DungeonPayload(serverId, serverType, chests, players);
@@ -189,7 +191,8 @@ public final class DungeonTracker implements Tracker {
                         return text.getString().trim();
                     }
                 }
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                FteLogger.debug(FteLogger.TRACK, "getDisplayText failed for " + className + ": " + e.getMessage());
             }
         }
         var name = entity.getCustomName();

@@ -5,6 +5,7 @@ import com.funtimeevents.sdk.tracker.Tracker;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.PlayerListEntry;
 
+import com.funtimeevents.sdk.util.FteLogger;
 import com.funtimeevents.sdk.util.PlayerNameUtil;
 
 import java.time.Instant;
@@ -16,10 +17,12 @@ public final class TabTracker implements Tracker {
 
     @Override
     public void start() {
+        FteLogger.info(FteLogger.TRACK, "TabTracker started");
     }
 
     @Override
     public void stop() {
+        FteLogger.info(FteLogger.TRACK, "TabTracker stopped");
     }
 
     @Override

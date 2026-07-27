@@ -61,8 +61,14 @@ public final class RelayCache {
             if (snapshot.systemInfo() != null) {
                 systemInfo = snapshot.systemInfo();
             }
+
+            FteLogger.debug(FteLogger.CACHE, "snapshot ts=" + lastTs + " events="
+                    + (snapshot.events() != null ? snapshot.events().size() : 0) + " mines="
+                    + (snapshot.mines() != null ? snapshot.mines().size() : 0) + " copper="
+                    + (snapshot.copperDungeons() != null ? snapshot.copperDungeons().size() : 0) + " warden="
+                    + (snapshot.wardenCities() != null ? snapshot.wardenCities().size() : 0));
         } catch (Exception e) {
-            FteLogger.warn("RelayCache failed to parse snapshot: " + e.getMessage());
+            FteLogger.warn(FteLogger.CACHE, "failed to parse snapshot: " + e.getMessage());
         }
     }
 

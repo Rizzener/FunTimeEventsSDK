@@ -1,5 +1,6 @@
 package com.funtimeevents.sdk.net.cache;
 
+import com.funtimeevents.sdk.util.FteLogger;
 import com.funtimeevents.sdk.util.GsonHolder;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -37,6 +38,7 @@ public final class SseCache<T> {
     public void start(CompletableFuture<HttpResponse<java.io.InputStream>> streamFuture) {
         if (running) return;
         running = true;
+        FteLogger.info(FteLogger.CACHE, threadName + " started");
         thread = new Thread(() -> readStream(streamFuture), threadName);
         thread.setDaemon(true);
         thread.start();
@@ -45,6 +47,7 @@ public final class SseCache<T> {
     public void stop() {
         running = false;
         if (thread != null) { thread.interrupt(); thread = null; }
+        FteLogger.info(FteLogger.CACHE, threadName + " stopped");
     }
 
     public List<T> getData() {
@@ -60,8 +63,12 @@ public final class SseCache<T> {
         while (running) {
             try {
                 HttpResponse<java.io.InputStream> response = streamFuture.get();
-                if (response.statusCode() != 200) { Thread.sleep(5000); continue; }
+                if (response.statusCode() != 200) {
+                    FteLogger.warn(FteLogger.CACHE, threadName + " SSE HTTP " + response.statusCode() + ", retrying in 5s");
+                    Thread.sleep(5000); continue;
+                }
 
+                FteLogger.info(FteLogger.CACHE, threadName + " SSE connected");
                 try (BufferedReader reader = new BufferedReader(
                         new InputStreamReader(response.body(), StandardCharsets.UTF_8))) {
                     String line;
@@ -74,7 +81,10 @@ public final class SseCache<T> {
                         }
                     }
                 }
-            } catch (Exception e) { try { Thread.sleep(5000); } catch (InterruptedException ignored) {} }
+            } catch (Exception e) {
+                FteLogger.warn(FteLogger.CACHE, threadName + " SSE error: " + e.getMessage() + ", retrying in 5s");
+                try { Thread.sleep(5000); } catch (InterruptedException ignored) {}
+            }
         }
     }
 
@@ -89,6 +99,9 @@ public final class SseCache<T> {
                 store.put(keyExtractor.apply(obj), obj);
             }
             lastUpdateNanos = System.nanoTime();
-        } catch (Exception ignored) {}
+            FteLogger.debug(FteLogger.CACHE, threadName + " received " + items.size() + " items");
+        } catch (Exception e) {
+            FteLogger.warn(FteLogger.CACHE, threadName + " failed to parse: " + e.getMessage());
+        }
     }
 }

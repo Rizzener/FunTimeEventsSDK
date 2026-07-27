@@ -35,4 +35,8 @@ public final class Scheduler {
         running = false;
         task = null;
     }
+
+    public int getIntervalTicks() {
+        return intervalTicks;
+    }
 }

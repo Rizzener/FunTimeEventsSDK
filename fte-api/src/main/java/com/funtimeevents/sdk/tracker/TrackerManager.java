@@ -10,6 +10,7 @@ import com.funtimeevents.sdk.tracker.mine.MineTracker;
 import com.funtimeevents.sdk.tracker.eventcoordinates.EventCoordinatesTracker;
 import com.funtimeevents.sdk.tracker.tab.TabTracker;
 import com.funtimeevents.sdk.tracker.tabheader.TabHeaderTracker;
+import com.funtimeevents.sdk.util.FteLogger;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -49,12 +50,14 @@ public final class TrackerManager {
     }
 
     public void startAll() {
+        FteLogger.info(FteLogger.CORE, "Starting " + trackers.size() + " trackers");
         for (Tracker t : trackers) {
             t.start();
         }
     }
 
     public void stopAll() {
+        FteLogger.info(FteLogger.CORE, "Stopping " + trackers.size() + " trackers");
         for (Tracker t : trackers) {
             t.stop();
         }

@@ -1,6 +1,7 @@
 package com.funtimeevents.sdk.tracker.tabheader;
 
 import com.funtimeevents.sdk.tracker.Tracker;
+import com.funtimeevents.sdk.util.FteLogger;
 import com.funtimeevents.sdk.util.ServerDetector;
 
 public final class TabHeaderTracker implements Tracker {
@@ -34,10 +35,12 @@ public final class TabHeaderTracker implements Tracker {
     @Override
     public void start() {
         refresh();
+        FteLogger.info(FteLogger.TRACK, "TabHeaderTracker started, serverId=" + serverId + " onFuntime=" + onFuntime);
     }
 
     @Override
     public void stop() {
+        FteLogger.info(FteLogger.TRACK, "TabHeaderTracker stopped");
         serverId = -1;
         serverIp = null;
         onFuntime = false;

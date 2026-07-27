@@ -68,6 +68,7 @@ public final class RelayClient implements PayloadSender {
     }
 
     public void disconnect() {
+        FteLogger.info(FteLogger.RELAY, "disconnecting");
         running = false;
         if (reconnectThread != null) reconnectThread.interrupt();
         if (webSocket != null) {
@@ -83,7 +84,7 @@ public final class RelayClient implements PayloadSender {
                 doConnect();
                 backoff = 1;
             } catch (Exception e) {
-                FteLogger.warn("Relay connect failed (" + e.getClass().getSimpleName() + "), retrying in " + backoff + "s: " + e.getMessage());
+                FteLogger.warn(FteLogger.RELAY, "Connect failed (" + e.getClass().getSimpleName() + "), retrying in " + backoff + "s: " + e.getMessage());
                 sleepSeconds(backoff);
                 backoff = Math.min(backoff * 2, MAX_BACKOFF_SECONDS);
             }
@@ -93,7 +94,7 @@ public final class RelayClient implements PayloadSender {
     private void doConnect() throws Exception {
         authenticated = false;
         lastSnapshotAt = System.currentTimeMillis();
-        FteLogger.info("Relay connecting to " + wsUrl + "...");
+        FteLogger.info(FteLogger.RELAY, "connecting to " + wsUrl + "...");
         CountDownLatch authLatch = new CountDownLatch(1);
         CountDownLatch closeLatch = new CountDownLatch(1);
         WebSocket.Builder builder = httpClient.newWebSocketBuilder();
@@ -122,13 +123,13 @@ public final class RelayClient implements PayloadSender {
 
             @Override
             public CompletionStage<?> onClose(WebSocket ws, int statusCode, String reason) {
-                FteLogger.warn("Relay closed: " + statusCode + " " + reason);
+                FteLogger.warn(FteLogger.RELAY, "closed: " + statusCode + " " + reason);
                 webSocket = null;
                 authenticated = false;
                 closeLatch.countDown();
                 authLatch.countDown();
                 if (statusCode == 4001) {
-                    FteLogger.error("Relay auth failed, not reconnecting");
+                    FteLogger.error(FteLogger.RELAY, "auth failed, not reconnecting");
                     running = false;
                 }
                 return null;
@@ -136,7 +137,7 @@ public final class RelayClient implements PayloadSender {
 
             @Override
             public void onError(WebSocket ws, Throwable error) {
-                FteLogger.warn("Relay error: " + error.getMessage());
+                FteLogger.warn(FteLogger.RELAY, "error: " + error.getMessage());
                 webSocket = null;
                 authenticated = false;
                 closeLatch.countDown();
@@ -146,11 +147,11 @@ public final class RelayClient implements PayloadSender {
         }).get();
 
         if (!authLatch.await(30, TimeUnit.SECONDS)) {
-            FteLogger.warn("Relay auth timeout, reconnecting");
+            FteLogger.warn(FteLogger.RELAY, "auth timeout, reconnecting");
             return;
         }
         if (!authenticated) {
-            FteLogger.warn("Relay auth rejected, reconnecting");
+            FteLogger.warn(FteLogger.RELAY, "auth rejected, reconnecting");
             return;
         }
 
@@ -159,7 +160,7 @@ public final class RelayClient implements PayloadSender {
                 while (!closeLatch.await(1, TimeUnit.SECONDS)) {
                     long idle = System.currentTimeMillis() - lastSnapshotAt;
                     if (idle > IDLE_TIMEOUT_MS) {
-                        FteLogger.warn("Relay snapshot watchdog: no snapshots for " + (idle / 1000) + "s, aborting");
+                        FteLogger.warn(FteLogger.RELAY, "snapshot watchdog: no snapshots for " + (idle / 1000) + "s, aborting");
                         try { ws.abort(); } catch (Exception ignored) {}
                         webSocket = null;
                         authenticated = false;
@@ -182,21 +183,26 @@ public final class RelayClient implements PayloadSender {
             Map<String, Object> parsed = GSON.fromJson(msg, Map.class);
             String type = (String) parsed.get("type");
             if ("snapshot".equals(type)) {
+                FteLogger.debug(FteLogger.RELAY, "received snapshot");
                 lastSnapshotAt = System.currentTimeMillis();
                 if (cache != null) cache.updateFromSnapshot(msg);
             } else if ("auth_ok".equals(type)) {
                 authenticated = true;
                 lastSnapshotAt = System.currentTimeMillis();
-                FteLogger.info("Relay authenticated");
+                FteLogger.info(FteLogger.RELAY, "authenticated");
                 authLatch.countDown();
                 flushPending();
             }
         } catch (Exception e) {
-            FteLogger.warn("Relay failed to parse message: " + e.getMessage());
+            FteLogger.warn(FteLogger.RELAY, "failed to parse message: " + e.getMessage());
         }
     }
 
     private void flushPending() {
+        int count = pending.size();
+        if (count > 0) {
+            FteLogger.info(FteLogger.RELAY, "flushing " + count + " queued messages");
+        }
         String msg;
         while ((msg = pending.poll()) != null) {
             sendRaw(msg);
@@ -213,8 +219,12 @@ public final class RelayClient implements PayloadSender {
         ioExecutor.execute(() -> {
             String msg = GSON.toJson(Map.of("type", type, "body", body));
             if (authenticated && webSocket != null) {
+                FteLogger.debug(FteLogger.RELAY, "sending " + type);
                 sendRaw(msg);
             } else {
+                if (pending.isEmpty()) {
+                    FteLogger.warn(FteLogger.RELAY, "relay not ready, buffering messages");
+                }
                 pending.add(msg);
             }
         });

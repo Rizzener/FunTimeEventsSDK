@@ -34,7 +34,7 @@ public final class Bootstrap {
 
         MinecraftClient client = MinecraftClient.getInstance();
         if (client == null) {
-            FteLogger.error("MinecraftClient not available — is Fabric loaded?");
+            FteLogger.error(FteLogger.CORE, "MinecraftClient not available — is Fabric loaded?");
             return;
         }
 
@@ -45,7 +45,7 @@ public final class Bootstrap {
         if (client.world != null) {
             onWorldJoin();
         } else {
-            FteLogger.info("Waiting for world...");
+            FteLogger.info(FteLogger.CORE, "Waiting for world...");
         }
     }
 
@@ -60,9 +60,10 @@ public final class Bootstrap {
             return;
         }
         running = true;
-        FteLogger.info("Connected to world");
+        FteLogger.info(FteLogger.CORE, "Connected to world");
         trackerManager.startAll();
         scheduler.start(() -> trackerManager.tickAll());
+        FteLogger.debug(FteLogger.CORE, "Scheduler started (interval=" + scheduler.getIntervalTicks() + " ticks)");
     }
 
     private void onWorldLeave() {
@@ -70,8 +71,9 @@ public final class Bootstrap {
             return;
         }
         running = false;
-        FteLogger.info("Disconnected from world");
+        FteLogger.info(FteLogger.CORE, "Disconnected from world");
         scheduler.stop();
+        FteLogger.debug(FteLogger.CORE, "Scheduler stopped");
         trackerManager.stopAll();
     }
 }

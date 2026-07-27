@@ -47,7 +47,7 @@ public final class BanTracker implements Tracker {
         }
         String playerName = matcher.group(1);
         String hoverText = extractHoverText(message);
-        FteLogger.info("Ban detected: player=" + playerName + ", hover=" + hoverText);
+        FteLogger.info(FteLogger.TRACK, "Ban detected: player=" + playerName + ", hover=" + hoverText);
 
         String reason = parseReason(hoverText);
         String end = parseEnd(hoverText);
@@ -79,7 +79,7 @@ public final class BanTracker implements Tracker {
                     }
                 }
             } catch (Exception e) {
-                FteLogger.debug("Hover text extraction failed: " + e.getMessage());
+                FteLogger.debug(FteLogger.TRACK, "Hover text extraction failed: " + e.getMessage());
             }
         }
         for (Text sibling : component.getSiblings()) {
@@ -116,12 +116,13 @@ public final class BanTracker implements Tracker {
     @Override
     public void start() {
         active = true;
-        FteLogger.info("BanTracker started, onFuntime=" + TabHeaderTracker.getInstance().isOnFuntime());
+        FteLogger.info(FteLogger.TRACK, "BanTracker started, onFuntime=" + TabHeaderTracker.getInstance().isOnFuntime());
     }
 
     @Override
     public void stop() {
         active = false;
+        FteLogger.info(FteLogger.TRACK, "BanTracker stopped");
     }
 
     @Override
