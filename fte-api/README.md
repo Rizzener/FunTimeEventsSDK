@@ -1,16 +1,21 @@
 # FunTimeEvents API (FTE SDK)
 
-Клиентская Java-библиотека для Minecraft Fabric (1.21.4). Одна строка инициализации — SDK сам отслеживает чат, игроков в мире и TAB-листе.
+Клиентская Java-библиотека для Minecraft Fabric, реализующая автоматическое отслеживание событий игрового мира на серверах FunTime.
 
 ## Возможности
 
-- Перехват **всех** сообщений чата (CHAT + GAME)
-- Отслеживание игроков в мире (дельта: join/leave)
-- Отслеживание игроков из TAB-листа (дельта: join/leave)
-- Публичный API: `getEvents()`, `onEvent()`
-- Автоматический жизненный цикл (старт при входе в мир, стоп при выходе)
-- HTTP-отправка событий на бэкенд (с ретраями и backoff)
-- Оффлайн-режим: все события доступны локально без сети
+- Перехват **всех** сообщений чата
+- Отслеживание банов (с парсингом hover-текста)
+- Игроки в TAB-листе (donate, online status)
+- Сканирование Города Вардена и Медного данжа (сундуки, игроки, экипировка)
+- Отслеживание эвентов (Гейзер, Вулкан, Метеоритный дождь, Маяк Убийца)
+- Боссбар «Адская резня» — mobs count
+- Игроки вокруг шахты на спавне (mine lobby)
+- Отправка капчи на решение
+- GET-запросы к бекенду (события, шахты, игроки, баны, данжи)
+- SSE-стримы с локальным кешем (события, шахты)
+- Публичный API: `pollEvents()`, `onEvent()`, `fetchXxx()`, `getCachedXxx()`
+- Каждый трекер можно отключить в билдере
 
 ## Требования
 
@@ -19,106 +24,211 @@
 - Fabric Loader 0.16+
 - Fabric API
 
-## Подключение
+## Быстрый старт
 
 ### 1. Добавь зависимость
 
-**`build.gradle`**
+Опубликуй SDK в локальный Maven-репозиторий:
+
+```bash
+cd FunTimeEventsSDK
+gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0-SNAPSHOT
+```
+
+**`build.gradle` своего мода:**
 
 ```groovy
 repositories {
-    maven { url = uri("https://your-maven-repo.example.com/releases") }
+    mavenLocal()
 }
 
 dependencies {
-    modImplementation "com.funtimeevents:fte-api:0.1.0"
-    include "com.funtimeevents:fte-api:0.1.0"
+    modImplementation "com.funtimeevents:fte-api:1.0-SNAPSHOT"
 }
 ```
 
-### 2. Вызови инициализацию
+### 2. Минимальная инициализация
+
+В `ClientModInitializer.onInitializeClient()`:
 
 ```java
-import com.funtimeevents.sdk.api.FunTimeEventsAPI;
-import com.funtimeevents.sdk.event.*;
-
-public class MyMod implements ClientModInitializer {
-    @Override
-    public void onInitializeClient() {
-        // Оффлайн-режим (события только локально):
-        FunTimeEventsAPI.init();
-
-        // Онлайн-режим (события шлются на бэкенд):
-        FunTimeEventsAPI.init("https://api.example.com", "your-api-key");
-
-        // Явное указание режима:
-        FunTimeEventsAPI.init("https://api.example.com", "your-api-key", false);
-
-        // Подписка на события:
-        FunTimeEventsAPI.onEvent(event -> {
-            if (event instanceof ChatMessageEvent msg) {
-                System.out.println(msg.sender() + ": " + msg.text());
-            }
-        });
-    }
-}
+FunTimeEventsAPI.builder()
+    .userAgent("MyMod/1.0")
+    .build();
 ```
 
-## Использование API
-
-### Polling (забираем события вручную)
+### 3. Онлайн-режим с API-ключом
 
 ```java
-// Где угодно, например в END_CLIENT_TICK:
-List<FteEvent> events = FunTimeEventsAPI.getEvents();
-for (FteEvent event : events) {
-    switch (event) {
-        case ChatMessageEvent msg ->
-            handleChat(msg.sender(), msg.text());
-        case PlayerJoinEvent join ->
-            handleJoin(join.name(), join.uuid(), join.source());
-        case PlayerLeaveEvent leave ->
-            handleLeave(leave.name(), leave.uuid(), leave.source());
-    }
-}
+FunTimeEventsAPI.builder()
+    .userAgent("MyMod/1.0")
+    .apiKey("your-api-key")
+    .build();
 ```
 
-### Push (подписка через callback)
+### 4. Подписка на локальные события
 
 ```java
 FunTimeEventsAPI.onEvent(event -> {
-    if (event instanceof PlayerJoinEvent join && join.source() == Source.TAB) {
-        System.out.println("New TAB player: " + join.name());
+    if (event instanceof ChatMessageEvent msg) {
+        System.out.println(msg.sender() + ": " + msg.text());
+    } else if (event instanceof BanDetectedEvent ban) {
+        System.out.println("Ban: " + ban.playerName());
     }
 });
+
+// Или pull:
+List<FteEvent> events = FunTimeEventsAPI.pollEvents();
 ```
 
-## Публикация в Maven-репозиторий
+### 5. GET-запросы к бекенду
 
-Сборка и публикация SDK в ваш репозиторий:
+```java
+// Получить список событий с фильтрами:
+FunTimeEventsAPI.fetchEvents(Map.of("server_id", "102", "level", "Легендарный"))
+    .thenAccept(json -> System.out.println(json));
 
-```bash
-./gradlew :fte-api:publish -Pmaven_publish_url=https://your-repo.example.com/releases \
-                           -Pmaven_publish_user=your-user \
-                           -Pmaven_publish_password=your-password
+// Получить шахты:
+FunTimeEventsAPI.fetchMines(Map.of("server_id", "102"))
+    .thenAccept(System.out::println);
+
+// Получить игроков:
+FunTimeEventsAPI.fetchPlayers(Map.of("player_name", "Rizzener"))
+    .thenAccept(System.out::println);
+
+// Получить баны:
+FunTimeEventsAPI.fetchBans(Map.of("server_id", "102"))
+    .thenAccept(System.out::println);
+
+// Все медные данжи:
+FunTimeEventsAPI.fetchCopperDungeon()
+    .thenAccept(System.out::println);
+
+// Все города вардена:
+FunTimeEventsAPI.fetchWardenCity()
+    .thenAccept(System.out::println);
 ```
 
-Или через переменные окружения:
+### 6. Кеш из SSE-стримов
 
-```bash
-export FTE_MAVEN_URL=https://your-repo.example.com/releases
-export FTE_MAVEN_USER=your-user
-export FTE_MAVEN_PASSWORD=your-password
-./gradlew :fte-api:publish
+Автоматически наполняется при online-инициализации:
+
+```java
+// Актуальный кеш событий (обновляется стримом):
+Map<String, JsonObject> events = FunTimeEventsAPI.getCachedEvents();
+
+// Актуальный кеш шахт:
+Map<String, JsonObject> mines = FunTimeEventsAPI.getCachedMines();
 ```
 
-## События
+### 7. Отправка капчи
+
+```java
+// Отправить скриншот капчи на решение:
+FunTimeEventsAPI.sendCaptcha(new CaptchaPayload("base64-encoded-screenshot"));
+```
+
+## Конфигурация Builder
+
+| Метод | По умолчанию | Описание |
+|-------|-------------|----------|
+| `.userAgent(String)` | **обязательный** | `User-Agent` HTTP-заголовок |
+| `.apiKey(String)` | — | Ключ для `X-API-Key` |
+| `.baseUrl(String)` | `https://api.funtimeevents.su/v1` | URL бекенда |
+| `.logLevel(LogLevel)` | `INFO` | `OFF`, `ERROR`, `WARN`, `INFO`, `DEBUG` |
+| `.tickIntervalSeconds(int)` | `10` | Периодичность сканирования |
+| `.offlineMode()` | — | Не создавать HTTP-клиент |
+| `.disableScanTabPlayers()` | — | Не сканировать TAB и не слать `/players` |
+| `.disableBansTracker()` | — | Не отслеживать баны и не слать `/bans` |
+| `.disableScanDungeon()` | — | Не сканировать данжи и не слать `/copper-dungeon` `/warden-city` |
+| `.disableScanHellMap()` | — | Не отслеживать Адскую резню и не слать `/events/hell-map` |
+| `.disableScanMine()` | — | Не сканировать mine lobby и не слать `/mines/players-around` |
+| `.disableEvent coordssTracker()` | — | Не отслеживать спавн-эвенты и не слать `/events/coordinates` |
+
+### Примеры конфигурации
+
+```java
+// Только баны и эвенты в режиме DEBUG:
+FunTimeEventsAPI.builder()
+    .userAgent("MyMod/1.0")
+    .apiKey("secret")
+    .logLevel(FteConfig.LogLevel.DEBUG)
+    .disableScanTabPlayers()
+    .disableScanDungeon()
+    .disableScanHellMap()
+    .disableScanMine()
+    .build();
+
+// Раз в 30 секунд:
+FunTimeEventsAPI.builder()
+    .userAgent("MyMod/1.0")
+    .apiKey("secret")
+    .tickIntervalSeconds(30)
+    .build();
+```
+
+## Локальные события (EventBus)
 
 | Событие | Поля |
 |---------|------|
 | `ChatMessageEvent` | `sender`, `text`, `timestamp` |
-| `PlayerJoinEvent` | `name`, `uuid`, `source` (TAB/WORLD), `timestamp` |
-| `PlayerLeaveEvent` | `name`, `uuid`, `source` (TAB/WORLD), `timestamp` |
+| `BanDetectedEvent` | `playerName`, `rawHoverText`, `timestamp` |
+
+## Отправляемые данные (POST)
+
+| Endpoint | Payload | Трекер |
+|----------|---------|--------|
+| `POST /players` | `TabPlayersPayload` | TabTracker |
+| `POST /bans` | `BanPayload` | BanTracker |
+| `POST /copper-dungeon` | `DungeonPayload` | DungeonTracker |
+| `POST /warden-city` | `DungeonPayload` | DungeonTracker |
+| `POST /events/hell-map` | `HellMapPayload` | HellMapTracker |
+| `POST /mines/players-around` | `MinePlayersAroundPayload` | MineTracker |
+| `POST /events/coordinates` | `EventCoordinatesPayload` | Event coordsTracker |
+| `POST /captcha` | `CaptchaPayload` | — |
+
+## Получаемые данные (GET)
+
+| Endpoint | Метод SDK | Параметры |
+|----------|----------|-----------|
+| `GET /events` | `fetchEvents(params)` | `server_id`, `server_type`, `name`, `level` |
+| `GET /mines` | `fetchMines(params)` | `server_id`, `server_type`, `rarity`, `time_before` |
+| `GET /players` | `fetchPlayers(params)` | `player_name`, `search`, `server_id`, `server_type`, `donate`, `active_after`, `limit` |
+| `GET /bans` | `fetchBans(params)` | `player_name`, `server_id`, `server_type`, `reason`, `limit`, `banned_after` |
+| `GET /copper-dungeon` | `fetchCopperDungeon()` | — |
+| `GET /warden-city` | `fetchWardenCity()` | — |
+
+## Архитектура
+
+```
+fte-api/
+  api/          — FunTimeEventsAPI (Builder), FteConfig
+  spi/          — PayloadSender interface
+  bootstrap/    — жизненный цикл (JOIN/DISCONNECT)
+  tracker/      — Tracker + TrackerManager + все трекеры
+  scheduler/    — tick-based периодический планировщик
+  event/        — FteEvent, EventBus, ChatMessageEvent, BanDetectedEvent
+  model/        — DTO для API-запросов
+  net/          — ApiClient (HTTP, POST + GET + SSE)
+  net/cache/    — EventCache, MineCache (SSE-стримы)
+  util/         — FteLogger, ServerDetector
+```
+
+## Сборка SDK
+
+```bash
+cd FunTimeEventsSDK
+gradlew :fte-api:build -Pmod_version=1.0-SNAPSHOT
+```
+
+## Публикация в Maven
+
+```bash
+gradlew :fte-api:publish -Pmod_version=1.0-SNAPSHOT \
+    -Pmaven_publish_url=https://your-repo.example.com/releases \
+    -Pmaven_publish_user=user \
+    -Pmaven_publish_password=pass
+```
 
 ## Лицензия
 

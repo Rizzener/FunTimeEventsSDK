@@ -1,7 +1,7 @@
-package com.funtimeevents.sdk.tracker.spawn;
+package com.funtimeevents.sdk.tracker.eventcoordinates;
 
-import com.funtimeevents.sdk.model.SpawnCoordinates;
-import com.funtimeevents.sdk.model.SpawnEventPayload;
+import com.funtimeevents.sdk.model.EventCoordinates;
+import com.funtimeevents.sdk.model.EventCoordinatesPayload;
 import com.funtimeevents.sdk.spi.PayloadSender;
 import com.funtimeevents.sdk.tracker.Tracker;
 import com.funtimeevents.sdk.tracker.tabheader.TabHeaderTracker;
@@ -11,7 +11,7 @@ import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public final class SpawnEventTracker implements Tracker {
+public final class EventCoordinatesTracker implements Tracker {
 
     private static final Pattern EVENT_PATTERN = Pattern.compile("\\|\\|\\|\\s+\\[(.+?)\\]\\s+\\|\\|\\|");
     private static final Pattern LEVEL_PATTERN = Pattern.compile("Уровень лута:\\s*(.+)");
@@ -21,7 +21,7 @@ public final class SpawnEventTracker implements Tracker {
     private final PayloadSender sender;
     private boolean active;
 
-    public SpawnEventTracker(PayloadSender sender) {
+    public EventCoordinatesTracker(PayloadSender sender) {
         this.sender = sender;
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
             if (!active || !TabHeaderTracker.getInstance().isOnFuntime()) {
@@ -53,15 +53,15 @@ public final class SpawnEventTracker implements Tracker {
             }
         }
 
-        FteLogger.info("Spawn event: " + eventName + " level=" + level + " coords=[" + x + ", " + y + ", " + z + "]");
+        FteLogger.info("Event coords: " + eventName + " level=" + level + " coords=[" + x + ", " + y + ", " + z + "]");
 
         TabHeaderTracker header = TabHeaderTracker.getInstance();
-        SpawnEventPayload payload = new SpawnEventPayload(
+        EventCoordinatesPayload payload = new EventCoordinatesPayload(
                 header.getServerId(), header.getServerType(),
                 eventName, level,
-                new SpawnCoordinates(x, y, z)
+                new EventCoordinates(x, y, z)
         );
-        sender.sendSpawnEvent(payload);
+        sender.sendEventCoordinates(payload);
     }
 
     @Override

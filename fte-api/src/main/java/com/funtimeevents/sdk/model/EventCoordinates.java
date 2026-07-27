@@ -2,7 +2,7 @@ package com.funtimeevents.sdk.model;
 
 import com.google.gson.annotations.SerializedName;
 
-public final class SpawnCoordinates {
+public final class EventCoordinates {
 
     @SerializedName("x")
     private final Integer x;
@@ -13,7 +13,7 @@ public final class SpawnCoordinates {
     @SerializedName("z")
     private final Integer z;
 
-    public SpawnCoordinates(Integer x, Integer y, Integer z) {
+    public EventCoordinates(Integer x, Integer y, Integer z) {
         this.x = x;
         this.y = y;
         this.z = z;

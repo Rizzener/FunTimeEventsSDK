@@ -13,7 +13,7 @@ public final class FteConfig {
     private final boolean dungeonEnabled;
     private final boolean hellMapEnabled;
     private final boolean mineEnabled;
-    private final boolean spawnEnabled;
+    private final boolean coordinatesEnabled;
     private final int tickIntervalTicks;
     private final boolean offlineMode;
 
@@ -27,7 +27,7 @@ public final class FteConfig {
         this.dungeonEnabled = builder.dungeonEnabled;
         this.hellMapEnabled = builder.hellMapEnabled;
         this.mineEnabled = builder.mineEnabled;
-        this.spawnEnabled = builder.spawnEnabled;
+        this.coordinatesEnabled = builder.coordinatesEnabled;
         this.tickIntervalTicks = builder.tickIntervalTicks;
         this.offlineMode = builder.offlineMode;
     }
@@ -41,7 +41,7 @@ public final class FteConfig {
     public boolean dungeonEnabled() { return dungeonEnabled; }
     public boolean hellMapEnabled() { return hellMapEnabled; }
     public boolean mineEnabled() { return mineEnabled; }
-    public boolean spawnEnabled() { return spawnEnabled; }
+    public boolean coordinatesEnabled() { return coordinatesEnabled; }
     public int tickIntervalTicks() { return tickIntervalTicks; }
     public boolean offlineMode() { return offlineMode; }
 
@@ -55,68 +55,45 @@ public final class FteConfig {
         boolean dungeonEnabled = true;
         boolean hellMapEnabled = true;
         boolean mineEnabled = true;
-        boolean spawnEnabled = true;
+        boolean coordinatesEnabled = true;
         int tickIntervalTicks = 200;
         boolean offlineMode;
 
         public Builder userAgent(String userAgent) {
-            this.userAgent = userAgent;
-            return this;
+            this.userAgent = userAgent; return this;
         }
-
         public Builder apiKey(String apiKey) {
-            this.apiKey = apiKey;
-            return this;
+            this.apiKey = apiKey; return this;
         }
-
         public Builder baseUrl(String baseUrl) {
-            this.baseUrl = baseUrl;
-            return this;
+            this.baseUrl = baseUrl; return this;
         }
-
         public Builder logLevel(LogLevel logLevel) {
-            this.logLevel = logLevel;
-            return this;
+            this.logLevel = logLevel; return this;
         }
-
-        public Builder disableTabPlayers() {
-            this.tabPlayersEnabled = false;
-            return this;
+        public Builder disableScanTabPlayers() {
+            this.tabPlayersEnabled = false; return this;
         }
-
-        public Builder disableBans() {
-            this.bansEnabled = false;
-            return this;
+        public Builder disableBansTracker() {
+            this.bansEnabled = false; return this;
         }
-
-        public Builder disableDungeon() {
-            this.dungeonEnabled = false;
-            return this;
+        public Builder disableScanDungeon() {
+            this.dungeonEnabled = false; return this;
         }
-
-        public Builder disableHellMap() {
-            this.hellMapEnabled = false;
-            return this;
+        public Builder disableScanHellMap() {
+            this.hellMapEnabled = false; return this;
         }
-
-        public Builder disableMine() {
-            this.mineEnabled = false;
-            return this;
+        public Builder disableScanMine() {
+            this.mineEnabled = false; return this;
         }
-
-        public Builder disableSpawn() {
-            this.spawnEnabled = false;
-            return this;
+        public Builder disableEventCoordinatesTracker() {
+            this.coordinatesEnabled = false; return this;
         }
-
         public Builder tickIntervalSeconds(int seconds) {
-            this.tickIntervalTicks = Math.max(20, seconds * 20);
-            return this;
+            this.tickIntervalTicks = Math.max(20, seconds * 20); return this;
         }
-
         public Builder offlineMode() {
-            this.offlineMode = true;
-            return this;
+            this.offlineMode = true; return this;
         }
 
         public FunTimeEventsAPI build() {

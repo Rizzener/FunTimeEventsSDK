@@ -8,7 +8,7 @@ import com.funtimeevents.sdk.tracker.chat.ChatTracker;
 import com.funtimeevents.sdk.tracker.dungeon.DungeonTracker;
 import com.funtimeevents.sdk.tracker.hell.HellMapTracker;
 import com.funtimeevents.sdk.tracker.mine.MineTracker;
-import com.funtimeevents.sdk.tracker.spawn.SpawnEventTracker;
+import com.funtimeevents.sdk.tracker.eventcoordinates.EventCoordinatesTracker;
 import com.funtimeevents.sdk.tracker.tab.TabTracker;
 import com.funtimeevents.sdk.tracker.tabheader.TabHeaderTracker;
 
@@ -29,8 +29,8 @@ public final class TrackerManager {
         if (config.bansEnabled()) {
             trackers.add(new BanTracker(sender));
         }
-        if (config.spawnEnabled()) {
-            trackers.add(new SpawnEventTracker(sender));
+        if (config.coordinatesEnabled()) {
+            trackers.add(new EventCoordinatesTracker(sender));
         }
         if (config.dungeonEnabled()) {
             trackers.add(new DungeonTracker(sender));

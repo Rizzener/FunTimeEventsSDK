@@ -2,7 +2,7 @@ package com.funtimeevents.sdk.model;
 
 import com.google.gson.annotations.SerializedName;
 
-public final class SpawnEventPayload {
+public final class EventCoordinatesPayload {
 
     @SerializedName("server_id")
     private final int serverId;
@@ -17,9 +17,9 @@ public final class SpawnEventPayload {
     private final String level;
 
     @SerializedName("coordinates")
-    private final SpawnCoordinates coordinates;
+    private final EventCoordinates coordinates;
 
-    public SpawnEventPayload(int serverId, String serverType, String event, String level, SpawnCoordinates coordinates) {
+    public EventCoordinatesPayload(int serverId, String serverType, String event, String level, EventCoordinates coordinates) {
         this.serverId = serverId;
         this.serverType = serverType;
         this.event = event;
@@ -31,5 +31,5 @@ public final class SpawnEventPayload {
     public String serverType() { return serverType; }
     public String event() { return event; }
     public String level() { return level; }
-    public SpawnCoordinates coordinates() { return coordinates; }
+    public EventCoordinates coordinates() { return coordinates; }
 }
