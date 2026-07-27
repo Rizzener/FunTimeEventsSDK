@@ -1,5 +1,6 @@
 package com.funtimeevents.sdk.net.cache;
 
+import com.funtimeevents.sdk.util.GsonHolder;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -16,7 +17,7 @@ import java.util.function.Function;
 
 public final class SseCache<T> {
 
-    private static final Gson GSON = new Gson();
+    private static final Gson GSON = GsonHolder.INSTANCE;
     private static final double STALE_SECONDS = 5.0;
 
     private final Map<String, T> store = new ConcurrentHashMap<>();

@@ -12,6 +12,7 @@ import com.funtimeevents.sdk.model.PlayersListResponse;
 import com.funtimeevents.sdk.model.TabPlayersPayload;
 import com.funtimeevents.sdk.spi.PayloadSender;
 import com.funtimeevents.sdk.util.FteLogger;
+import com.funtimeevents.sdk.util.GsonHolder;
 import com.google.gson.Gson;
 
 import java.net.URI;
@@ -27,7 +28,7 @@ import java.util.stream.Collectors;
 
 public final class ApiClient implements PayloadSender {
 
-    private static final Gson GSON = new Gson();
+    private static final Gson GSON = GsonHolder.INSTANCE;
     private static final Duration TIMEOUT = Duration.ofSeconds(15);
 
     private final String baseUrl;
@@ -61,7 +62,6 @@ public final class ApiClient implements PayloadSender {
     public void sendMinePlayers(MinePlayersAroundPayload payload) { postJson("/mines/players-around", payload); }
     @Override
     public void sendEventCoordinates(EventCoordinatesPayload payload) { postJson("/events/coordinates", payload); }
-    @Override
     public void sendCaptcha(CaptchaPayload payload) { postJson("/captcha", payload); }
 
     // --- GET methods ---
@@ -117,19 +117,21 @@ public final class ApiClient implements PayloadSender {
 
     // --- Internal ---
 
+    private HttpRequest buildPostRequest(String path, String json) {
+        return HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl + path))
+                .header("Content-Type", "application/json")
+                .header("X-API-Key", apiKey)
+                .header("User-Agent", userAgent)
+                .timeout(TIMEOUT)
+                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .build();
+    }
+
     private CompletableFuture<String> postJsonForResponse(String path, Object body) {
         String json = GSON.toJson(body);
         try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(baseUrl + path))
-                    .header("Content-Type", "application/json")
-                    .header("X-API-Key", apiKey)
-                    .header("User-Agent", userAgent)
-                    .timeout(TIMEOUT)
-                    .POST(HttpRequest.BodyPublishers.ofString(json))
-                    .build();
-
-            return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+            return httpClient.sendAsync(buildPostRequest(path, json), HttpResponse.BodyHandlers.ofString())
                     .thenApply(response -> {
                         if (response.statusCode() >= 400) {
                             FteLogger.warn("HTTP " + response.statusCode() + " from " + path + ": " + response.body());
@@ -149,16 +151,7 @@ public final class ApiClient implements PayloadSender {
     private void postJson(String path, Object body) {
         String json = GSON.toJson(body);
         try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(baseUrl + path))
-                    .header("Content-Type", "application/json")
-                    .header("X-API-Key", apiKey)
-                    .header("User-Agent", userAgent)
-                    .timeout(TIMEOUT)
-                    .POST(HttpRequest.BodyPublishers.ofString(json))
-                    .build();
-
-            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+            httpClient.sendAsync(buildPostRequest(path, json), HttpResponse.BodyHandlers.ofString())
                     .thenAccept(response -> {
                         String responseBody = response.body();
                         if (response.statusCode() >= 400) {

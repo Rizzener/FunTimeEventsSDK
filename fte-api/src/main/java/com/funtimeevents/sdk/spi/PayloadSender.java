@@ -1,7 +1,6 @@
 package com.funtimeevents.sdk.spi;
 
 import com.funtimeevents.sdk.model.BanPayload;
-import com.funtimeevents.sdk.model.CaptchaPayload;
 import com.funtimeevents.sdk.model.DungeonPayload;
 import com.funtimeevents.sdk.model.EventCoordinatesPayload;
 import com.funtimeevents.sdk.model.HellMapPayload;
@@ -17,5 +16,4 @@ public interface PayloadSender {
     void sendHellMap(HellMapPayload payload);
     void sendMinePlayers(MinePlayersAroundPayload payload);
     void sendEventCoordinates(EventCoordinatesPayload payload);
-    void sendCaptcha(CaptchaPayload payload);
 }

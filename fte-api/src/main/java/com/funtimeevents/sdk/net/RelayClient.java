@@ -10,6 +10,7 @@ import com.funtimeevents.sdk.model.TabPlayersPayload;
 import com.funtimeevents.sdk.net.cache.RelayCache;
 import com.funtimeevents.sdk.spi.PayloadSender;
 import com.funtimeevents.sdk.util.FteLogger;
+import com.funtimeevents.sdk.util.GsonHolder;
 import com.google.gson.Gson;
 
 import java.net.URI;
@@ -20,10 +21,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public final class RelayClient implements PayloadSender {
 
-    private static final Gson GSON = new Gson();
+    private static final Gson GSON = GsonHolder.INSTANCE;
     private static final int MAX_BACKOFF_SECONDS = 60;
 
     private final String wsUrl;
@@ -86,7 +88,7 @@ public final class RelayClient implements PayloadSender {
             @Override
             public void onOpen(WebSocket ws) {
                 webSocket = ws;
-                String auth = "{\"type\":\"auth\",\"api_key\":\"" + apiKey + "\"}";
+                String auth = GSON.toJson(Map.of("type", "auth", "api_key", apiKey));
                 ws.sendText(auth, true);
                 WebSocket.Listener.super.onOpen(ws);
             }
@@ -125,7 +127,7 @@ public final class RelayClient implements PayloadSender {
             }
         }).get();
 
-        latch.await();  // блокируемся до onClose/onError
+        latch.await(30, TimeUnit.SECONDS);  // блокируемся до onClose/onError или таймаута
     }
 
     private void processMessage(String msg) {
@@ -176,5 +178,4 @@ public final class RelayClient implements PayloadSender {
     @Override public void sendHellMap(HellMapPayload p) { sendMessage("hell_map", p); }
     @Override public void sendEventCoordinates(EventCoordinatesPayload p) { sendMessage("coordinates", p); }
     @Override public void sendMinePlayers(MinePlayersAroundPayload p) { sendMessage("players_around", p); }
-    @Override public void sendCaptcha(CaptchaPayload p) { throw new UnsupportedOperationException("captcha goes via REST"); }
 }

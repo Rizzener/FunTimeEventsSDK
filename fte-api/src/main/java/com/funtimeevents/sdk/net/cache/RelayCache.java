@@ -5,6 +5,7 @@ import com.funtimeevents.sdk.model.LootAreaResponse;
 import com.funtimeevents.sdk.model.MineResponse;
 import com.funtimeevents.sdk.model.Snapshot;
 import com.funtimeevents.sdk.model.SystemInfo;
+import com.funtimeevents.sdk.util.GsonHolder;
 import com.google.gson.Gson;
 
 import java.util.List;
@@ -13,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class RelayCache {
 
-    private static final Gson GSON = new Gson();
+    private static final Gson GSON = GsonHolder.INSTANCE;
     private static final double STALE_SECONDS = 5.0;
 
     private final Map<String, EventResponse> events = new ConcurrentHashMap<>();
