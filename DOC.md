@@ -26,7 +26,7 @@
 ## Требования
 
 - **Java 21**
-- **Minecraft 1.21.x — 26.x**
+- **Minecraft 1.21.x**
 - **Fabric Loader** 0.16+
 - **Fabric API**
 
@@ -308,7 +308,7 @@ FunTimeEventsAPI.solveCaptcha("base64-encoded-png")
 
 Парсит сообщения чата на предмет бана — извлекает имя игрока, причину, длительность и сервер через hover-текст (рефлексия).
 
-**Рефлексия:** `HoverEvent.Action.SHOW_TEXT` — `getAction()`, `getValue()` (разные названия в 1.21.x vs 26.x).
+**Рефлексия:** `HoverEvent.Action.SHOW_TEXT` — `getAction()`, `getValue()` (разные названия в 1.21.x).
 
 ### 2. TabTracker (`tracker/tab/TabTracker.java`)
 
@@ -393,7 +393,7 @@ FunTimeEventsAPI.builder()
 
 ---
 
-## Cross-version compatibility (1.21.x, 26.x)
+## Cross-version compatibility (1.21.x)
 
 SDK использует **рефлексию** для API Minecraft, которые отличаются в разных версиях Yarn-маппингов:
 

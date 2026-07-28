@@ -31,7 +31,7 @@ dependencies {
 ### Gradle versions
 
 - **Wrapper:** Gradle 9.6.1 (`gradle-wrapper.properties`)
-- **Fabric Loom:** 1.17-SNAPSHOT (set in `settings.gradle.kts` pluginManagement, not in subproject)
+- **Fabric Loom:** 1.17 (set in `settings.gradle.kts` pluginManagement, not in subproject)
 - **Java:** 21 (sourceCompatibility + targetCompatibility)
 
 The subproject `fte-api/build.gradle.kts` does NOT specify a fabric-loom version — it inherits from `settings.gradle.kts` pluginManagement.
@@ -72,16 +72,18 @@ cd C:\dev\FunTimeEventsSDK
 
 ## Architecture
 
-### Package map (41 Java files)
+`DOC.md` is the full Russian user-facing documentation (443 lines). AGENTS.md is a compact agent-focused supplement — if something is unclear here, check DOC.md first.
+
+### Package map (47 Java files)
 
 ```
 api/ (2)            FunTimeEventsAPI.java (Builder facade), FteConfig.java (immutable config)
 spi/ (1)            PayloadSender.java — KEY INTERFACE, breaks api↔tracker cycle
 bootstrap/ (1)      Bootstrap.java (lifecycle: JOIN/DISCONNECT, ClientTickEvents)
 tracker/ (9)        Tracker.java (interface), TrackerManager.java,
-                    8 tracker impls: BanTracker, DungeonTracker, EventCoordinatesTracker,
+                    7 tracker impls: BanTracker, DungeonTracker, EventCoordinatesTracker,
                     HellMapTracker, MineTracker, TabTracker, ServerContext
-  flat packages:    ban/, dungeon/, eventcoordinates/, hell/, mine/, tab/, tabheader/
+  flat packages:    ban/, dungeon/, eventcoordinates/, hell/, mine/, tab/, server/
 scheduler/ (1)      Scheduler.java (tick-based, called from ClientTickEvents.END_CLIENT_TICK)
 model/ (25)         All request payloads + response DTOs (flat package, no subpackages)
 net/ (2+2)          ApiClient.java (REST POST+GET), RelayClient.java (WSS),
@@ -242,7 +244,7 @@ postJson("/mines/players-around", ...)
 
 ---
 
-## Cross-version compatibility (1.21.x, 26.x)
+## Cross-version compatibility (1.21.x)
 
 The SDK uses **reflection** for Minecraft APIs that differ between Yarn mapping versions:
 
@@ -252,7 +254,7 @@ The SDK uses **reflection** for Minecraft APIs that differ between Yarn mapping 
 
 **Do NOT use direct imports** of classes that may differ between Yarn versions. Use `var` for inferred types and reflection for method/field access.
 
-Stable imports (safe across 1.21.x and 26.x):
+Stable imports (safe across 1.21.x):
 - `MinecraftClient`, `PlayerEntity`, `Blocks`, `Text`, `EquipmentSlot`
 - `ClientReceiveMessageEvents`, `ClientTickEvents`, `ClientPlayConnectionEvents` (Fabric API)
 - `Registries`, `ItemStack`, `BlockPos`, `Entity`
@@ -284,18 +286,26 @@ Five modules:
 
 SDK compiles **once** under 1.21.4 Yarn. One `.jar` works on all versions — Fabric Loader remaps bytecode at runtime.
 
-**Test matrix** at `version-test/build_matrix.py` — auto-fetches latest Yarn + Fabric API versions from Fabric meta API and builds consumer against each:
+**Test matrix** at `test-ver/version-test/build_matrix.py` — auto-fetches latest Yarn + Fabric API versions from Fabric meta API and builds consumer against each. The root `build_matrix.py` is legacy (uses wrong `:compileJava` task — real one uses `:fte-api:compileJava`):
 
 ```bash
-cd version-test
-python build_matrix.py
+cd test-ver
+python version-test/build_matrix.py
 ```
 
-**Local relay test** at `test_relay_server.py` — simulates backend for watchdog and tracker testing:
+**Runtime reflection check** at `test-ver/testmod/` — a standalone Fabric mod (`FteVersionCheckMod`) that validates the 3 reflection points (bossBars field, TextDisplayEntity.getText, HoverEvent accessors) at runtime under the current Minecraft version. Compile-check alone doesn't catch reflection issues:
+```bash
+cd test-ver/testmod
+./gradlew runClient
+# Look for "[FTE-VERSION-CHECK]" in logs
+```
+
+**Local relay test** at `test_relay_server.py` / `test_relay_watchdog.py` — simulates backend for watchdog and tracker testing:
 ```bash
 pip install websockets
 python test_relay_server.py          # watchdog test (3 snapshots then silent)
 python test_relay_server.py --live   # endless snapshots, logs all received payloads
+python test_relay_watchdog.py        # standalone watchdog-only variant
 ```
 
 ---
@@ -316,6 +326,14 @@ Single shared Gson instance in `util/GsonHolder.java`. All classes use `GsonHold
 ### `findProperty` in build.gradle.kts
 The SDK's `build.gradle.kts` uses `findProperty` for ALL version properties. This allows consumer projects to override versions via their own `gradle.properties`. Never use `property()` — use `findProperty()` with fallback.
 
+### `gradle.properties` dual-version layout
+The file has **both** `1.21.x` values for the same keys — the last one wins:
+```
+minecraft_version=1.21.4
+fabric_api_version=0.113.0+1.21.4
+```
+This is intentional for version switching (patched by `build_matrix.py`). When editing `gradle.properties` manually, duplicate keys make the file fragile — always check which value the last occurrence sets.
+
 ### `fabric.mod.json` dependencies
 Only declares `"minecraft": ">=1.21.0"`. Does NOT declare `fabric-loader` or `fabric-api` — these are provided by the consumer mod. Adding them caused jar-in-jar AccessWidener namespace errors in earlier versions.
 
@@ -328,7 +346,7 @@ Single shared utility for extracting donator prefix from TAB player display name
 - Caches `getTextMethod` via volatile static field (one-time resolution)
 
 ### ServerDetector
-- `isFuntime(ip)` — checks `*.funtime.su` or `*.funtime.sh`
+- `isFuntime(ip)` — checks `*.funtime.su` / `.sh` / `.me` / `.store` / `.network` / `.wiki`
 - `extractServerId(text)` — parses `Анархия-{n}` from scoreboard sidebar title
-- `getServerIdHint()` — reads `ScoreboardDisplaySlot.SIDEBAR`
+- `getSidebarTitle()` — reads `ScoreboardDisplaySlot.SIDEBAR`
 - Server ID comes from scoreboard, NOT from TAB header (mixin not needed)
