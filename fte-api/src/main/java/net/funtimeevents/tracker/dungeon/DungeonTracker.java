@@ -5,7 +5,7 @@ import net.funtimeevents.model.DungeonPayload;
 import net.funtimeevents.model.PlayerGearInfo;
 import net.funtimeevents.spi.PayloadSender;
 import net.funtimeevents.tracker.Tracker;
-import net.funtimeevents.tracker.tabheader.TabHeaderTracker;
+import net.funtimeevents.tracker.server.ServerContext;
 import net.funtimeevents.util.FteLogger;
 import net.funtimeevents.util.PlayerNameUtil;
 import net.minecraft.block.Blocks;
@@ -65,8 +65,8 @@ public final class DungeonTracker implements Tracker {
 
     @Override
     public void tick() {
-        TabHeaderTracker header = TabHeaderTracker.getInstance();
-        if (!header.isOnFuntime()) {
+        ServerContext ctx = ServerContext.getInstance();
+        if (!ctx.isOnFuntime()) {
             return;
         }
 
@@ -87,8 +87,8 @@ public final class DungeonTracker implements Tracker {
             return;
         }
 
-        int serverId = header.getServerId();
-        String serverType = header.getServerType();
+        int serverId = ctx.getServerId();
+        String serverType = ctx.getServerType();
 
         processZone(world, serverId, serverType, playerZone);
     }

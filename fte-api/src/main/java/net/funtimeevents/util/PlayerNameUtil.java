@@ -4,6 +4,12 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.entity.player.PlayerEntity;
 
+/**
+ * Extracts donator prefix from TAB player display names.
+ *
+ * <p>Used by {@code TabTracker}, {@code MineTracker}, and {@code DungeonTracker}.
+ * Two overloads — one takes a {@link PlayerEntity}, the other a {@link PlayerListEntry}.
+ */
 public final class PlayerNameUtil {
 
     private PlayerNameUtil() {

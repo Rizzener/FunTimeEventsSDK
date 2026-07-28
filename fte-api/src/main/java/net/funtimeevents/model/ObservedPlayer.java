@@ -2,7 +2,10 @@ package net.funtimeevents.model;
 
 import com.google.gson.annotations.SerializedName;
 
-public final class TabPlayer {
+/**
+ * Immutable: a player observed in the TAB list or around the mine spawn.
+ */
+public final class ObservedPlayer {
 
     @SerializedName("player_name")
     private final String playerName;
@@ -11,15 +14,17 @@ public final class TabPlayer {
     private final String donate;
 
     @SerializedName("active")
-    private final String active;
+    private final String seenAt;
 
-    public TabPlayer(String playerName, String donate, String active) {
+    public ObservedPlayer(String playerName, String donate, String seenAt) {
         this.playerName = playerName;
         this.donate = donate;
-        this.active = active;
+        this.seenAt = seenAt;
     }
 
     public String playerName() { return playerName; }
     public String donate() { return donate; }
-    public String active() { return active; }
+
+    /** ISO-8601 timestamp when the player was observed. */
+    public String seenAt() { return seenAt; }
 }

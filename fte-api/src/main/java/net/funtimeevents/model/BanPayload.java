@@ -2,6 +2,9 @@ package net.funtimeevents.model;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * Request: a ban event that was detected in chat (player name, hover text, server id).
+ */
 public final class BanPayload {
 
     @SerializedName("server_id")

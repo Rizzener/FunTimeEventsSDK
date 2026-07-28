@@ -30,7 +30,7 @@ public final class Bootstrap {
         }
         started = true;
         this.trackerManager = trackerManager;
-        this.scheduler = new Scheduler(config.tickIntervalTicks());
+        this.scheduler = new Scheduler(config.tickIntervalSeconds() * 20);
 
         MinecraftClient client = MinecraftClient.getInstance();
         if (client == null) {

@@ -2,6 +2,9 @@ package net.funtimeevents.model;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * Request: detected event with name, level, and coordinates.
+ */
 public final class EventCoordinatesPayload {
 
     @SerializedName("server_id")

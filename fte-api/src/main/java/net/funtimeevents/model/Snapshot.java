@@ -4,6 +4,9 @@ import com.google.gson.annotations.SerializedName;
 
 import java.util.List;
 
+/**
+ * Response: a relay snapshot containing events, mines, dungeons, and system info.
+ */
 public final class Snapshot {
 
     @SerializedName("type")

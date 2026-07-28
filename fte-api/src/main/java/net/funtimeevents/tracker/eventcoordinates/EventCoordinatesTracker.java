@@ -4,7 +4,7 @@ import net.funtimeevents.model.EventCoordinates;
 import net.funtimeevents.model.EventCoordinatesPayload;
 import net.funtimeevents.spi.PayloadSender;
 import net.funtimeevents.tracker.Tracker;
-import net.funtimeevents.tracker.tabheader.TabHeaderTracker;
+import net.funtimeevents.tracker.server.ServerContext;
 import net.funtimeevents.util.FteLogger;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 
@@ -24,7 +24,7 @@ public final class EventCoordinatesTracker implements Tracker {
     public EventCoordinatesTracker(PayloadSender sender) {
         this.sender = sender;
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
-            if (!active || !TabHeaderTracker.getInstance().isOnFuntime()) {
+            if (!active || !ServerContext.getInstance().isOnFuntime()) {
                 return;
             }
             handleMessage(message.getString());
@@ -55,9 +55,9 @@ public final class EventCoordinatesTracker implements Tracker {
 
         FteLogger.info(FteLogger.TRACK, "Event coords: " + eventName + " level=" + level + " coords=[" + x + ", " + y + ", " + z + "]");
 
-        TabHeaderTracker header = TabHeaderTracker.getInstance();
+        ServerContext ctx = ServerContext.getInstance();
         EventCoordinatesPayload payload = new EventCoordinatesPayload(
-                header.getServerId(), header.getServerType(),
+                ctx.getServerId(), ctx.getServerType(),
                 eventName, level,
                 new EventCoordinates(x, y, z)
         );

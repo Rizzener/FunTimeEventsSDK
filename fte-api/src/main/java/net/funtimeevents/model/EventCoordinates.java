@@ -2,6 +2,9 @@ package net.funtimeevents.model;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * Immutable: x/y/z coordinates of an event.
+ */
 public final class EventCoordinates {
 
     @SerializedName("x")

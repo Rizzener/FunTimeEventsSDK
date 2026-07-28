@@ -2,6 +2,9 @@ package net.funtimeevents.model;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * Response: an active event with time left and optional coordinates.
+ */
 public final class EventResponse {
 
     @SerializedName("server_id")

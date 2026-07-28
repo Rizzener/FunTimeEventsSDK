@@ -2,6 +2,9 @@ package net.funtimeevents.model;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * Immutable: a single chest found in a dungeon zone (position, time left).
+ */
 public final class ChestInfo {
 
     @SerializedName("x")

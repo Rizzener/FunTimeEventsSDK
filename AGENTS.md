@@ -80,7 +80,7 @@ spi/ (1)            PayloadSender.java — KEY INTERFACE, breaks api↔tracker c
 bootstrap/ (1)      Bootstrap.java (lifecycle: JOIN/DISCONNECT, ClientTickEvents)
 tracker/ (9)        Tracker.java (interface), TrackerManager.java,
                     8 tracker impls: BanTracker, DungeonTracker, EventCoordinatesTracker,
-                    HellMapTracker, MineTracker, TabTracker, TabHeaderTracker
+                    HellMapTracker, MineTracker, TabTracker, ServerContext
   flat packages:    ban/, dungeon/, eventcoordinates/, hell/, mine/, tab/, tabheader/
 scheduler/ (1)      Scheduler.java (tick-based, called from ClientTickEvents.END_CLIENT_TICK)
 model/ (25)         All request payloads + response DTOs (flat package, no subpackages)
@@ -203,9 +203,9 @@ Two-latch pattern:
 **ALL shared mutable fields MUST be `volatile`.**
 
 Critical locations:
-- `ChatTracker.active`, `BanTracker.active`, `HellMapTracker.active`, `EventCoordinatesTracker.active` — written on ClientTick thread, read on Netty event callbacks
+- `BanTracker.active`, `HellMapTracker.active`, `EventCoordinatesTracker.active` — written on ClientTick thread, read on Netty event callbacks
 - `Bootstrap.running`, `Bootstrap.started` — written in join/leave events
-- `TabHeaderTracker.serverId`, `serverIp`, `onFuntime` — read from 6+ trackers across threads
+- `ServerContext.serverId`, `serverIp`, `onFuntime` — read from 6+ trackers across threads
 - `RelayClient.webSocket` — written in WebSocket callback thread, read in render thread
 - `RelayClient.lastSnapshotAt` — written in WebSocket listener thread, read in watchdog thread
 - `FunTimeEventsAPI.instance` — synchronized double-checked locking in `create()`

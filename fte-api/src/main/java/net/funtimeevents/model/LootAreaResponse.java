@@ -4,6 +4,9 @@ import com.google.gson.annotations.SerializedName;
 
 import java.util.List;
 
+/**
+ * Response: a dungeon server state (players and chests).
+ */
 public final class LootAreaResponse {
 
     @SerializedName("server_id")

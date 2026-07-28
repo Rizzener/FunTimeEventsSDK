@@ -2,6 +2,9 @@ package net.funtimeevents.model;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * Response: a single chest from the backend.
+ */
 public final class ChestResponse {
 
     @SerializedName("x")

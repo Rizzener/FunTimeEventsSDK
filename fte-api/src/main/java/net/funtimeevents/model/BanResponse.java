@@ -2,6 +2,9 @@ package net.funtimeevents.model;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * Response: a single ban record from the bans list (player, reason, end time, staff, server).
+ */
 public final class BanResponse {
 
     @SerializedName("server_id")

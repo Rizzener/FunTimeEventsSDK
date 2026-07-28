@@ -4,6 +4,9 @@ import com.google.gson.annotations.SerializedName;
 
 import java.util.List;
 
+/**
+ * Request: dungeon scan results (server, type, players, chests).
+ */
 public final class DungeonPayload {
 
     @SerializedName("server_id")

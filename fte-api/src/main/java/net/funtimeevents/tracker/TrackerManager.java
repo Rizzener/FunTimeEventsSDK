@@ -9,7 +9,7 @@ import net.funtimeevents.tracker.hell.HellMapTracker;
 import net.funtimeevents.tracker.mine.MineTracker;
 import net.funtimeevents.tracker.eventcoordinates.EventCoordinatesTracker;
 import net.funtimeevents.tracker.tab.TabTracker;
-import net.funtimeevents.tracker.tabheader.TabHeaderTracker;
+import net.funtimeevents.tracker.server.ServerContext;
 import net.funtimeevents.util.FteLogger;
 
 import java.util.List;
@@ -25,7 +25,7 @@ public final class TrackerManager {
     public TrackerManager(PayloadSender sender, FteConfig config) {
         this.sender = sender;
         this.tabPlayersEnabled = config.tabPlayersEnabled();
-        trackers.add(TabHeaderTracker.getInstance());
+        trackers.add(ServerContext.getInstance());
 
         if (config.bansEnabled()) {
             trackers.add(new BanTracker(sender));
@@ -67,22 +67,22 @@ public final class TrackerManager {
         for (Tracker t : trackers) {
             t.tick();
         }
-        assembleTabPlayersPayload();
+        sendTabPlayersPayload();
     }
 
-    private void assembleTabPlayersPayload() {
+    private void sendTabPlayersPayload() {
         if (!tabPlayersEnabled) {
             return;
         }
-        TabHeaderTracker header = TabHeaderTracker.getInstance();
-        if (!header.isOnFuntime()) {
+        ServerContext ctx = ServerContext.getInstance();
+        if (!ctx.isOnFuntime()) {
             return;
         }
         var players = tabTracker.getCurrentPlayers();
         if (players.isEmpty()) {
             return;
         }
-        var payload = new TabPlayersPayload(header.getServerId(), header.getServerType(), players);
+        var payload = new TabPlayersPayload(ctx.getServerId(), ctx.getServerType(), players);
         sender.sendTabPlayers(payload);
     }
 }

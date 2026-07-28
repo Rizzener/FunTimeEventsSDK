@@ -1,10 +1,10 @@
 package net.funtimeevents.tracker.mine;
 
 import net.funtimeevents.model.MinePlayersAroundPayload;
-import net.funtimeevents.model.TabPlayer;
+import net.funtimeevents.model.ObservedPlayer;
 import net.funtimeevents.spi.PayloadSender;
 import net.funtimeevents.tracker.Tracker;
-import net.funtimeevents.tracker.tabheader.TabHeaderTracker;
+import net.funtimeevents.tracker.server.ServerContext;
 import net.funtimeevents.util.FteLogger;
 import net.funtimeevents.util.PlayerNameUtil;
 import net.minecraft.client.MinecraftClient;
@@ -43,8 +43,8 @@ public final class MineTracker implements Tracker {
 
     @Override
     public void tick() {
-        TabHeaderTracker header = TabHeaderTracker.getInstance();
-        if (!header.isOnFuntime()) {
+        ServerContext ctx = ServerContext.getInstance();
+        if (!ctx.isOnFuntime()) {
             return;
         }
 
@@ -70,7 +70,7 @@ public final class MineTracker implements Tracker {
             return;
         }
 
-        List<TabPlayer> playersAround = new ArrayList<>();
+        List<ObservedPlayer> playersAround = new ArrayList<>();
         String now = Instant.now().toString();
 
         for (PlayerEntity player : world.getPlayers()) {
@@ -83,12 +83,12 @@ public final class MineTracker implements Tracker {
 
             String name = player.getGameProfile().getName();
             String donate = PlayerNameUtil.extractDonate(player);
-            playersAround.add(new TabPlayer(name, donate, now));
+            playersAround.add(new ObservedPlayer(name, donate, now));
         }
 
         if (!playersAround.isEmpty()) {
-            FteLogger.info(FteLogger.TRACK, "Mine lobby: " + playersAround.size() + " players around spawn");
-            var payload = new MinePlayersAroundPayload(header.getServerId(), header.getServerType(), playersAround);
+            FteLogger.info(FteLogger.TRACK, "Auto-mine: " + playersAround.size() + " players around spawn");
+            var payload = new MinePlayersAroundPayload(ctx.getServerId(), ctx.getServerType(), playersAround);
             sender.sendMinePlayers(payload);
         }
     }

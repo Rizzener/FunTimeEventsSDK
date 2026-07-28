@@ -8,16 +8,23 @@ import net.minecraft.scoreboard.ScoreboardObjective;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Detects FunTime servers and extracts metadata from scoreboard / server IP.
+ *
+ * <p>Used internally by trackers to determine whether the player is
+ * on a supported server and to read the current server ID.
+ */
 public final class ServerDetector {
 
     private static final Pattern FUN_TIME_PATTERN = Pattern.compile(
-            "^(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)*)funtime\\.(su|sh)$"
+            "^(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)*)funtime\\.(su|sh|me|store|network|wiki)$"
     );
     private static final Pattern SERVER_ID_PATTERN = Pattern.compile("Анархия-(\\d+)");
 
     private ServerDetector() {
     }
 
+    /** Returns {@code true} if the given server address belongs to a FunTime network server. */
     public static boolean isFuntime(String serverIp) {
         if (serverIp == null) {
             return false;
@@ -25,6 +32,7 @@ public final class ServerDetector {
         return FUN_TIME_PATTERN.matcher(serverIp).matches();
     }
 
+    /** Extracts the server ID from scoreboard title text (e.g. {@code Анархия-4 → 4}). */
     public static int extractServerId(String text) {
         if (text == null) {
             return -1;
@@ -45,7 +53,7 @@ public final class ServerDetector {
         return null;
     }
 
-    public static String getServerIdHint() {
+    public static String getSidebarTitle() {
         var client = MinecraftClient.getInstance();
         if (client.player == null) {
             return null;

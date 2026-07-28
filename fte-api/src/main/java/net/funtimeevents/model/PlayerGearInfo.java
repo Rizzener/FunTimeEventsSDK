@@ -2,6 +2,9 @@ package net.funtimeevents.model;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * Immutable: a single player's gear in a dungeon zone (name, donate, armor slots, invisibility).
+ */
 public final class PlayerGearInfo {
 
     @SerializedName("player_name")

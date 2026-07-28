@@ -3,7 +3,7 @@ package net.funtimeevents.tracker.hell;
 import net.funtimeevents.model.HellMapPayload;
 import net.funtimeevents.spi.PayloadSender;
 import net.funtimeevents.tracker.Tracker;
-import net.funtimeevents.tracker.tabheader.TabHeaderTracker;
+import net.funtimeevents.tracker.server.ServerContext;
 import net.funtimeevents.util.FteLogger;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
@@ -30,7 +30,7 @@ public final class HellMapTracker implements Tracker {
     public HellMapTracker(PayloadSender sender) {
         this.sender = sender;
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (!active || TabHeaderTracker.getInstance() == null) return;
+            if (!active || !ServerContext.getInstance().isOnFuntime()) return;
             tickCounter++;
             if (tickCounter >= TICK_INTERVAL) {
                 tickCounter = 0;
@@ -81,8 +81,8 @@ public final class HellMapTracker implements Tracker {
     }
 
     private void doScan() {
-        TabHeaderTracker header = TabHeaderTracker.getInstance();
-        if (!header.isOnFuntime()) {
+        ServerContext ctx = ServerContext.getInstance();
+        if (!ctx.isOnFuntime()) {
             return;
         }
 
@@ -120,7 +120,7 @@ public final class HellMapTracker implements Tracker {
             int mobsCount = Integer.parseInt(m.group(1));
             FteLogger.info(FteLogger.TRACK, "HellMap: mobs_count=" + mobsCount + " text=" + text);
 
-            HellMapPayload payload = new HellMapPayload(header.getServerId(), header.getServerType(), mobsCount);
+            HellMapPayload payload = new HellMapPayload(ctx.getServerId(), ctx.getServerType(), mobsCount);
             sender.sendHellMap(payload);
             return;
         }

@@ -2,6 +2,9 @@ package net.funtimeevents.model;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * Request: Hell Map boss bar data (monster count, text).
+ */
 public final class HellMapPayload {
 
     @SerializedName("server_id")

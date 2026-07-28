@@ -1,6 +1,6 @@
 package net.funtimeevents.tracker.tab;
 
-import net.funtimeevents.model.TabPlayer;
+import net.funtimeevents.model.ObservedPlayer;
 import net.funtimeevents.tracker.Tracker;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.PlayerListEntry;
@@ -29,17 +29,17 @@ public final class TabTracker implements Tracker {
     public void tick() {
     }
 
-    public List<TabPlayer> getCurrentPlayers() {
+    public List<ObservedPlayer> getCurrentPlayers() {
         var handler = MinecraftClient.getInstance().getNetworkHandler();
         if (handler == null) {
             return Collections.emptyList();
         }
         String now = Instant.now().toString();
-        List<TabPlayer> result = new ArrayList<>();
+        List<ObservedPlayer> result = new ArrayList<>();
         for (PlayerListEntry entry : handler.getPlayerList()) {
             String name = entry.getProfile().getName();
             String donate = PlayerNameUtil.extractDonate(entry);
-            result.add(new TabPlayer(name, donate, now));
+            result.add(new ObservedPlayer(name, donate, now));
         }
         return result;
     }

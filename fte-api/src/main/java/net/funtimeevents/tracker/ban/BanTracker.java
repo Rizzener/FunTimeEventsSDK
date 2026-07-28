@@ -3,7 +3,7 @@ package net.funtimeevents.tracker.ban;
 import net.funtimeevents.model.BanPayload;
 import net.funtimeevents.spi.PayloadSender;
 import net.funtimeevents.tracker.Tracker;
-import net.funtimeevents.tracker.tabheader.TabHeaderTracker;
+import net.funtimeevents.tracker.server.ServerContext;
 import net.funtimeevents.util.FteLogger;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.text.Text;
@@ -26,13 +26,13 @@ public final class BanTracker implements Tracker {
     public BanTracker(PayloadSender sender) {
         this.sender = sender;
         ClientReceiveMessageEvents.CHAT.register((message, signedMessage, s, params, receptionTimestamp) -> {
-            if (!active || !TabHeaderTracker.getInstance().isOnFuntime()) {
+            if (!active || !ServerContext.getInstance().isOnFuntime()) {
                 return;
             }
             handleMessage(message);
         });
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
-            if (!active || !TabHeaderTracker.getInstance().isOnFuntime()) {
+            if (!active || !ServerContext.getInstance().isOnFuntime()) {
                 return;
             }
             handleMessage(message);
@@ -52,12 +52,12 @@ public final class BanTracker implements Tracker {
         String reason = parseReason(hoverText);
         String end = parseEnd(hoverText);
 
-        TabHeaderTracker header = TabHeaderTracker.getInstance();
+        ServerContext ctx = ServerContext.getInstance();
         int serverId = parseServerId(hoverText);
         if (serverId <= 0) {
-            serverId = header.getServerId();
+            serverId = ctx.getServerId();
         }
-        String serverType = header.getServerType();
+        String serverType = ctx.getServerType();
 
         BanPayload payload = new BanPayload(serverId, serverType, playerName, reason, end);
         sender.sendBan(payload);
@@ -116,7 +116,7 @@ public final class BanTracker implements Tracker {
     @Override
     public void start() {
         active = true;
-        FteLogger.info(FteLogger.TRACK, "BanTracker started, onFuntime=" + TabHeaderTracker.getInstance().isOnFuntime());
+        FteLogger.info(FteLogger.TRACK, "BanTracker started, onFuntime=" + ServerContext.getInstance().isOnFuntime());
     }
 
     @Override

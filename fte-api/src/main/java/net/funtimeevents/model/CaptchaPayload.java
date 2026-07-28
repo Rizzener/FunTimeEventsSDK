@@ -2,6 +2,9 @@ package net.funtimeevents.model;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * Request: captcha image data sent to the backend.
+ */
 public final class CaptchaPayload {
 
     @SerializedName("base64")

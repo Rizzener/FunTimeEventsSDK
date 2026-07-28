@@ -4,6 +4,9 @@ import com.google.gson.annotations.SerializedName;
 
 import java.util.List;
 
+/**
+ * Response: captcha solve result with optional percent results.
+ */
 public final class CaptchaResponse {
 
     @SerializedName("solved")
@@ -23,6 +26,9 @@ public final class CaptchaResponse {
     public Double overallPercent() { return overallPercent; }
     public List<PercentResult> results() { return results; }
 
+    /**
+     * A single digit recognition result with its confidence percentage.
+     */
     public static final class PercentResult {
         @SerializedName("number")
         private String number;

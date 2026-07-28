@@ -4,6 +4,9 @@ import com.google.gson.annotations.SerializedName;
 
 import java.util.List;
 
+/**
+ * Response: wrapper for a list of ban records.
+ */
 public final class BansListResponse {
 
     @SerializedName("data")

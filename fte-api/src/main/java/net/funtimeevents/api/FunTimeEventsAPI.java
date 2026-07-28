@@ -20,6 +20,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Entry point for the FunTimeEvents SDK.
+ *
+ * <p>Create and configure the SDK once on mod startup, then use
+ * the static methods to access cached data or make backend requests.
+ *
+ * <pre>{@code
+ * FunTimeEventsAPI.builder()
+ *     .userAgent("MyMod/1.0")
+ *     .apiKey("sk-fte-...")
+ *     .build();
+ * }</pre>
+ */
 public final class FunTimeEventsAPI {
 
     private static volatile FunTimeEventsAPI instance;
@@ -34,6 +47,10 @@ public final class FunTimeEventsAPI {
     private FunTimeEventsAPI() {
     }
 
+    /**
+     * Returns a new {@link FteConfig.Builder} — the only way
+     * to configure and initialise the SDK.
+     */
     public static FteConfig.Builder builder() {
         return new FteConfig.Builder();
     }
@@ -108,56 +125,124 @@ public final class FunTimeEventsAPI {
 
     // --- Backend GET ---
 
+    /**
+     * Fetches active events from the backend.
+     *
+     * @param params optional query parameters (e.g. {@code Map.of("server_id", "4")})
+     * @return JSON response as a raw string
+     * @see #getEvents() for a cached, typed view
+     */
     public static CompletableFuture<String> fetchEvents(Map<String, String> params) {
         return restClient != null ? restClient.getEvents(params) : CompletableFuture.completedFuture(null);
     }
 
+    /**
+     * Fetches active mines from the backend.
+     *
+     * @param params optional query parameters
+     * @return JSON response as a raw string
+     * @see #getMines() for a cached, typed view
+     */
     public static CompletableFuture<String> fetchMines(Map<String, String> params) {
         return restClient != null ? restClient.getMines(params) : CompletableFuture.completedFuture(null);
     }
 
+    /**
+     * Fetches player metadata from the backend.
+     *
+     * @param params query parameters (e.g. {@code Map.of("player_name", "Steve")})
+     * @return typed response with per-server history for the player
+     */
     public static CompletableFuture<PlayersListResponse> fetchPlayers(Map<String, String> params) {
         return restClient != null ? restClient.getPlayers(params) : CompletableFuture.completedFuture(null);
     }
 
+    /**
+     * Fetches recent ban records from the backend.
+     *
+     * @param params optional query parameters (e.g. {@code Map.of("limit", "10")})
+     * @return typed response with ban list
+     */
     public static CompletableFuture<BansListResponse> fetchBans(Map<String, String> params) {
         return restClient != null ? restClient.getBans(params) : CompletableFuture.completedFuture(null);
     }
 
+    /**
+     * Fetches copper dungeon state from the backend.
+     *
+     * @return JSON response as a raw string
+     * @see #getCopperDungeons() for a cached, typed view
+     */
     public static CompletableFuture<String> fetchCopperDungeon() {
         return restClient != null ? restClient.getCopperDungeon() : CompletableFuture.completedFuture(null);
     }
 
+    /**
+     * Fetches Warden City dungeon state from the backend.
+     *
+     * @return JSON response as a raw string
+     * @see #getWardenCities() for a cached, typed view
+     */
     public static CompletableFuture<String> fetchWardenCity() {
         return restClient != null ? restClient.getWardenCity() : CompletableFuture.completedFuture(null);
     }
 
     // --- Cached data (relay snapshots or SSE, ≤5s fresh) ---
 
+    /**
+     * Returns locally cached active events, updated automatically
+     * from the relay (WSS mode) or SSE stream (REST mode).
+     *
+     * @return never {@code null}; empty list when no data is available
+     */
     public static List<EventResponse> getEvents() {
         if (relayCache != null) return relayCache.getEvents();
         if (eventCache != null) return eventCache.getData();
         return List.of();
     }
 
+    /**
+     * Returns locally cached active mines, updated automatically
+     * from the relay or SSE stream.
+     *
+     * @return never {@code null}; empty list when no data is available
+     */
     public static List<MineResponse> getMines() {
         if (relayCache != null) return relayCache.getMines();
         if (mineCache != null) return mineCache.getData();
         return List.of();
     }
 
+    /**
+     * Returns locally cached copper dungeon data,
+     * updated automatically from the relay or SSE stream.
+     *
+     * @return never {@code null}; empty list when no data is available
+     */
     public static List<LootAreaResponse> getCopperDungeons() {
         if (relayCache != null) return relayCache.getCopperDungeons();
         if (copperCache != null) return copperCache.getData();
         return List.of();
     }
 
+    /**
+     * Returns locally cached Warden City data,
+     * updated automatically from the relay or SSE stream.
+     *
+     * @return never {@code null}; empty list when no data is available
+     */
     public static List<LootAreaResponse> getWardenCities() {
         if (relayCache != null) return relayCache.getWardenCities();
         if (wardenCache != null) return wardenCache.getData();
         return List.of();
     }
 
+    /**
+     * Returns backend system info (events / mines / dungeon / client counts).
+     * Available only in WSS relay mode.
+     *
+     * @return the info object, or {@code null} if not connected in WSS mode
+     */
     public static SystemInfo getSystemInfo() {
         if (relayCache != null) return relayCache.getSystemInfo();
         return null;
@@ -165,10 +250,22 @@ public final class FunTimeEventsAPI {
 
     // --- POST ---
 
+    /**
+     * Sends a captcha payload to the backend for manual verification.
+     * Captcha always uses REST, regardless of WebSocket mode.
+     *
+     * @param payload the captcha payload to send
+     */
     public static void sendCaptcha(net.funtimeevents.model.CaptchaPayload payload) {
         if (restClient != null) restClient.sendCaptcha(payload);
     }
 
+    /**
+     * Sends a base64-encoded screenshot to the backend for captcha solving.
+     *
+     * @param base64 the PNG screenshot as a base64 string
+     * @return the solve result (solved text + confidence), or {@code null} on failure
+     */
     public static CompletableFuture<CaptchaResponse> solveCaptcha(String base64) {
         if (restClient != null) return restClient.solveCaptcha(base64);
         return CompletableFuture.completedFuture(null);

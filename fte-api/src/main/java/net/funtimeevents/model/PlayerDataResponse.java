@@ -4,6 +4,9 @@ import com.google.gson.annotations.SerializedName;
 
 import java.util.List;
 
+/**
+ * Response: a player's metadata with server history.
+ */
 public final class PlayerDataResponse {
 
     @SerializedName("player_name")

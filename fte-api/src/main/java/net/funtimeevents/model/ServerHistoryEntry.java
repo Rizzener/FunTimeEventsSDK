@@ -2,6 +2,9 @@ package net.funtimeevents.model;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * Response: a single server visit record for a player (server id, type, first/last seen).
+ */
 public final class ServerHistoryEntry {
 
     @SerializedName("server_id")

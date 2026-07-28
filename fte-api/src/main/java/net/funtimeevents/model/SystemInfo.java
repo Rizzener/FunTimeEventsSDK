@@ -2,6 +2,9 @@ package net.funtimeevents.model;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * Response: backend system statistics (event/mine/dungeon counts, connected clients).
+ */
 public final class SystemInfo {
 
     @SerializedName("events")

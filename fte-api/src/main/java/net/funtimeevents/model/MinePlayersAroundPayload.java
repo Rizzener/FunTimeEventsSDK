@@ -4,6 +4,9 @@ import com.google.gson.annotations.SerializedName;
 
 import java.util.List;
 
+/**
+ * Request: players detected around the spawn auto-mine.
+ */
 public final class MinePlayersAroundPayload {
 
     @SerializedName("server_id")
@@ -13,9 +16,9 @@ public final class MinePlayersAroundPayload {
     private final String serverType;
 
     @SerializedName("players_around")
-    private final List<TabPlayer> playersAround;
+    private final List<ObservedPlayer> playersAround;
 
-    public MinePlayersAroundPayload(int serverId, String serverType, List<TabPlayer> playersAround) {
+    public MinePlayersAroundPayload(int serverId, String serverType, List<ObservedPlayer> playersAround) {
         this.serverId = serverId;
         this.serverType = serverType;
         this.playersAround = playersAround;
@@ -23,5 +26,5 @@ public final class MinePlayersAroundPayload {
 
     public int serverId() { return serverId; }
     public String serverType() { return serverType; }
-    public List<TabPlayer> playersAround() { return playersAround; }
+    public List<ObservedPlayer> playersAround() { return playersAround; }
 }
