@@ -1,0 +1,79 @@
+package net.funtimeevents.bootstrap;
+
+import net.funtimeevents.api.FteConfig;
+import net.funtimeevents.scheduler.Scheduler;
+import net.funtimeevents.tracker.TrackerManager;
+import net.funtimeevents.util.FteLogger;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.minecraft.client.MinecraftClient;
+
+public final class Bootstrap {
+
+    private static final Bootstrap INSTANCE = new Bootstrap();
+
+    private TrackerManager trackerManager;
+    private Scheduler scheduler;
+    private volatile boolean running;
+    private volatile boolean started;
+
+    private Bootstrap() {
+    }
+
+    public static Bootstrap getInstance() {
+        return INSTANCE;
+    }
+
+    public void start(TrackerManager trackerManager, FteConfig config) {
+        if (started) {
+            return;
+        }
+        started = true;
+        this.trackerManager = trackerManager;
+        this.scheduler = new Scheduler(config.tickIntervalTicks());
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null) {
+            FteLogger.error(FteLogger.CORE, "MinecraftClient not available — is Fabric loaded?");
+            return;
+        }
+
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, client_) -> onWorldJoin());
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client_) -> onWorldLeave());
+        ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
+
+        if (client.world != null) {
+            onWorldJoin();
+        } else {
+            FteLogger.info(FteLogger.CORE, "Waiting for world...");
+        }
+    }
+
+    private void onClientTick(MinecraftClient client) {
+        if (running) {
+            scheduler.tick();
+        }
+    }
+
+    private void onWorldJoin() {
+        if (running) {
+            return;
+        }
+        running = true;
+        FteLogger.info(FteLogger.CORE, "Connected to world");
+        trackerManager.startAll();
+        scheduler.start(() -> trackerManager.tickAll());
+        FteLogger.debug(FteLogger.CORE, "Scheduler started (interval=" + scheduler.getIntervalTicks() + " ticks)");
+    }
+
+    private void onWorldLeave() {
+        if (!running) {
+            return;
+        }
+        running = false;
+        FteLogger.info(FteLogger.CORE, "Disconnected from world");
+        scheduler.stop();
+        FteLogger.debug(FteLogger.CORE, "Scheduler stopped");
+        trackerManager.stopAll();
+    }
+}

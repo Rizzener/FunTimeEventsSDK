@@ -22,7 +22,7 @@ Remove-Item -Recurse -Force .gradle -ErrorAction SilentlyContinue
 ```groovy
 repositories { mavenLocal() }
 dependencies {
-    modImplementation "com.funtimeevents:fte-api:1.0-SNAPSHOT"
+    modImplementation "net.funtimeevents:fte-api:1.0-SNAPSHOT"
 }
 ```
 
@@ -49,7 +49,7 @@ The `fabric_api_version` property also falls back to `findProperty("fabric_versi
 
 After ANY SDK code change, the consumer's Loom cache MUST be deleted:
 ```
-C:\dev\IDEA\untitled\.gradle\loom-cache\remapped_mods\remapped\com\funtimeevents\fte-api-*
+C:\dev\IDEA\untitled\.gradle\loom-cache\remapped_mods\remapped\net\funtimeevents\fte-api-*
 ```
 
 If forgotten, the consumer will compile and run with OLD SDK code. No warning, no error — just silently stale.
@@ -256,6 +256,47 @@ Stable imports (safe across 1.21.x and 26.x):
 - `MinecraftClient`, `PlayerEntity`, `Blocks`, `Text`, `EquipmentSlot`
 - `ClientReceiveMessageEvents`, `ClientTickEvents`, `ClientPlayConnectionEvents` (Fabric API)
 - `Registries`, `ItemStack`, `BlockPos`, `Entity`
+
+---
+
+## Logging
+
+**Always use module tags.** FteLogger requires a module constant as first argument:
+
+```java
+FteLogger.info(FteLogger.RELAY, "connected");
+FteLogger.info(FteLogger.TRACK, "Mine lobby: 5 players around spawn");
+FteLogger.warn(FteLogger.API, "HTTP 400 /players: " + msg);
+```
+
+Five modules:
+- `CORE` — SDK lifecycle, bootstrap, scheduler
+- `RELAY` — WebSocket connect/auth/watchdog/disconnect/flush/pending
+- `API` — HTTP requests/responses/gzip
+- `CACHE` — SSE streams, snapshot parsing
+- `TRACK` — all 7 trackers (start/stop/data output/reflection errors)
+
+**Never use `catch (Exception ignored) {}`.** Log the exception with `FteLogger.warn` or `FteLogger.debug`. The only allowed silent catches are best-effort calls that can fail harmlessly (`webSocket.sendClose()` in disconnect, `ws.abort()` in watchdog).
+
+---
+
+## Version compatibility
+
+SDK compiles **once** under 1.21.4 Yarn. One `.jar` works on all versions — Fabric Loader remaps bytecode at runtime.
+
+**Test matrix** at `version-test/build_matrix.py` — auto-fetches latest Yarn + Fabric API versions from Fabric meta API and builds consumer against each:
+
+```bash
+cd version-test
+python build_matrix.py
+```
+
+**Local relay test** at `test_relay_server.py` — simulates backend for watchdog and tracker testing:
+```bash
+pip install websockets
+python test_relay_server.py          # watchdog test (3 snapshots then silent)
+python test_relay_server.py --live   # endless snapshots, logs all received payloads
+```
 
 ---
 
