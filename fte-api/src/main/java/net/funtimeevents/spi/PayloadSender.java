@@ -15,9 +15,6 @@ import net.funtimeevents.model.TabPlayersPayload;
  *   <li>{@code RelayClient} — WebSocket relay (default, WSS mode)</li>
  *   <li>{@code ApiClient} — HTTP POST (REST mode, when {@code .disableWebSocket()} is used)</li>
  * </ul>
- *
- * <p><strong>Important:</strong> never add {@code sendCaptcha} here.
- * Captcha always uses REST, regardless of the mode.
  */
 public interface PayloadSender {
 

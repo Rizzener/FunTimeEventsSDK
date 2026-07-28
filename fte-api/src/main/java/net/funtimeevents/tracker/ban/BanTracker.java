@@ -8,6 +8,7 @@ import net.funtimeevents.util.FteLogger;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.text.Text;
 
+import java.lang.reflect.Method;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -19,6 +20,9 @@ public final class BanTracker implements Tracker {
     private static final Pattern HOVER_REASON_PATTERN = Pattern.compile("Причина:\\s*(.+)");
     private static final Pattern HOVER_END_PATTERN = Pattern.compile("(?:До|Наказание|Бан до|Окончание):\\s*(.+)");
     private static final Pattern HOVER_SERVER_PATTERN = Pattern.compile("Сервер:\\s*(.+)");
+
+    private static volatile Method GET_ACTION_METHOD;
+    private static volatile Method GET_VALUE_METHOD;
 
     private final PayloadSender sender;
     private volatile boolean active;
@@ -71,9 +75,13 @@ public final class BanTracker implements Tracker {
         var hoverEvent = component.getStyle().getHoverEvent();
         if (hoverEvent != null) {
             try {
-                Object action = hoverEvent.getClass().getMethod("getAction").invoke(hoverEvent);
+                Method getAction = resolveGetAction(hoverEvent);
+                if (getAction == null) return Optional.empty();
+                Object action = getAction.invoke(hoverEvent);
                 if (action != null && action.toString().contains("show_text")) {
-                    Object value = hoverEvent.getClass().getMethod("getValue", action.getClass()).invoke(hoverEvent, action);
+                    Method getValue = resolveGetValue(hoverEvent, action.getClass());
+                    if (getValue == null) return Optional.empty();
+                    Object value = getValue.invoke(hoverEvent, action);
                     if (value instanceof Text hoverText) {
                         return Optional.of(hoverText.getString());
                     }
@@ -89,6 +97,26 @@ public final class BanTracker implements Tracker {
             }
         }
         return Optional.empty();
+    }
+
+    private static Method resolveGetAction(Object hoverEvent) {
+        if (GET_ACTION_METHOD != null) return GET_ACTION_METHOD;
+        try {
+            GET_ACTION_METHOD = hoverEvent.getClass().getMethod("getAction");
+        } catch (Exception e) {
+            FteLogger.debug(FteLogger.TRACK, "getAction method not found: " + e.getMessage());
+        }
+        return GET_ACTION_METHOD;
+    }
+
+    private static Method resolveGetValue(Object hoverEvent, Class<?> actionClass) {
+        if (GET_VALUE_METHOD != null) return GET_VALUE_METHOD;
+        try {
+            GET_VALUE_METHOD = hoverEvent.getClass().getMethod("getValue", actionClass);
+        } catch (Exception e) {
+            FteLogger.debug(FteLogger.TRACK, "getValue method not found: " + e.getMessage());
+        }
+        return GET_VALUE_METHOD;
     }
 
     static String parseReason(String hoverText) {

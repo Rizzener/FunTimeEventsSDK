@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,6 +37,7 @@ public final class DungeonTracker implements Tracker {
     private static final Zone COPPER_ZONE = new Zone("Copper", 1900, 2100, 1900, 2100, -60, 5);
 
     private static volatile java.lang.reflect.Method getTextMethod;
+    private static final Map<Class<?>, Boolean> TEXT_DISPLAY_CLASS_CACHE = new ConcurrentHashMap<>();
 
     private final PayloadSender sender;
 
@@ -179,8 +181,7 @@ public final class DungeonTracker implements Tracker {
     }
 
     private String getDisplayText(Entity entity) {
-        String className = entity.getClass().getSimpleName().toLowerCase();
-        if (className.contains("textdisplay") || className.contains("text_display")) {
+        if (isTextDisplay(entity)) {
             try {
                 if (getTextMethod == null) {
                     getTextMethod = entity.getClass().getMethod("getText");
@@ -192,11 +193,18 @@ public final class DungeonTracker implements Tracker {
                     }
                 }
             } catch (Exception e) {
-                FteLogger.debug(FteLogger.TRACK, "getDisplayText failed for " + className + ": " + e.getMessage());
+                FteLogger.debug(FteLogger.TRACK, "getDisplayText failed: " + e.getMessage());
             }
         }
         var name = entity.getCustomName();
         return name != null ? name.getString().trim() : null;
+    }
+
+    private static boolean isTextDisplay(Entity entity) {
+        return TEXT_DISPLAY_CLASS_CACHE.computeIfAbsent(entity.getClass(), cls -> {
+            String simple = cls.getSimpleName().toLowerCase();
+            return simple.contains("textdisplay") || simple.contains("text_display");
+        });
     }
 
     private String itemName(ItemStack stack) {

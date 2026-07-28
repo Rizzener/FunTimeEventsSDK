@@ -66,7 +66,6 @@ public final class ApiClient implements PayloadSender {
     public void sendMinePlayers(MinePlayersAroundPayload payload) { postJson("/mines/players-around", payload); }
     @Override
     public void sendEventCoordinates(EventCoordinatesPayload payload) { postJson("/events/coordinates", payload); }
-    public void sendCaptcha(CaptchaPayload payload) { postJson("/captcha", payload); }
 
     // --- GET methods ---
 

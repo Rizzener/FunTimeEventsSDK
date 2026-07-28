@@ -251,16 +251,6 @@ public final class FunTimeEventsAPI {
     // --- POST ---
 
     /**
-     * Sends a captcha payload to the backend for manual verification.
-     * Captcha always uses REST, regardless of WebSocket mode.
-     *
-     * @param payload the captcha payload to send
-     */
-    public static void sendCaptcha(net.funtimeevents.model.CaptchaPayload payload) {
-        if (restClient != null) restClient.sendCaptcha(payload);
-    }
-
-    /**
      * Sends a base64-encoded screenshot to the backend for captcha solving.
      *
      * @param base64 the PNG screenshot as a base64 string
