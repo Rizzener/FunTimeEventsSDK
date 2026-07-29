@@ -99,6 +99,10 @@ public final class DungeonTracker implements Tracker {
         }
 
         int serverId = ctx.getServerId();
+        if (serverId < 0) {
+            FteLogger.warn(FteLogger.TRACK, "DungeonTracker skipped: serverId not resolved");
+            return;
+        }
         String serverType = ctx.getServerType();
 
         processZone(world, serverId, serverType, playerZone);

@@ -65,6 +65,10 @@ public final class HellMapTracker implements Tracker {
         if (!ctx.isOnFuntime()) {
             return;
         }
+        if (ctx.getServerId() < 0) {
+            FteLogger.warn(FteLogger.TRACK, "HellMapTracker skipped: serverId not resolved");
+            return;
+        }
 
         Map<?, ?> bars = BossBarUtil.getBossBars();
         if (bars == null || bars.isEmpty()) {

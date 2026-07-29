@@ -21,7 +21,7 @@
 ```bash
 git clone https://github.com/Rizzener/FunTimeEventsSDK.git
 cd FunTimeEventsSDK
-.\gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0.1-SNAPSHOT
+.\gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0.2-SNAPSHOT
 ```
 
 ### 2. Зависимость в `build.gradle`
@@ -33,7 +33,7 @@ repositories { mavenLocal() }
 **Minecraft 1.21.x:**
 ```groovy
 dependencies {
-    modImplementation "net.funtimeevents:fte-api:1.0.1-SNAPSHOT"
+    modImplementation "net.funtimeevents:fte-api:1.0.2-SNAPSHOT"
 }
 ```
 

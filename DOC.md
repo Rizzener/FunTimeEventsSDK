@@ -38,7 +38,7 @@
 
 ```bash
 cd C:\dev\FunTimeEventsSDK
-.\gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0.1-SNAPSHOT
+.\gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0.2-SNAPSHOT
 ```
 
 ### Шаг 2: Подключение в `build.gradle` (Groovy DSL)
@@ -49,7 +49,7 @@ repositories {
 }
 
 dependencies {
-    modImplementation "net.funtimeevents:fte-api:1.0.1-SNAPSHOT"
+    modImplementation "net.funtimeevents:fte-api:1.0.2-SNAPSHOT"
 }
 ```
 

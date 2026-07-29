@@ -10,7 +10,7 @@ The ONLY reliable workflow is standalone SDK build + mavenLocal consumption.
 ```bash
 # Step 1: Build SDK and publish to local Maven
 cd C:\dev\FunTimeEventsSDK
-.\gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0.1-SNAPSHOT
+.\gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0.2-SNAPSHOT
 
 # Step 2: Clear consumer's Loom cache and build
 cd C:\dev\IDEA\FTE_SDK_TEST\v1_21_11
@@ -22,7 +22,7 @@ Remove-Item -Recurse -Force .gradle, build\loom-cache -ErrorAction SilentlyConti
 ```groovy
 repositories { mavenLocal() }
 dependencies {
-    modImplementation "net.funtimeevents:fte-api:1.0.1-SNAPSHOT"
+    modImplementation "net.funtimeevents:fte-api:1.0.2-SNAPSHOT"
 }
 ```
 
@@ -65,7 +65,7 @@ Remove-Item -Recurse -Force .gradle -ErrorAction SilentlyContinue
 For SDK-only compilation checks (no consumer needed):
 ```bash
 cd C:\dev\FunTimeEventsSDK
-.\gradlew :fte-api:build -Pmod_version=1.0.1-SNAPSHOT
+.\gradlew :fte-api:build -Pmod_version=1.0.2-SNAPSHOT
 ```
 
 ---

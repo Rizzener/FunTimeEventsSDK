@@ -47,6 +47,10 @@ public final class MineTracker implements Tracker {
         if (!ctx.isOnFuntime()) {
             return;
         }
+        if (ctx.getServerId() < 0) {
+            FteLogger.warn(FteLogger.TRACK, "MineTracker skipped: serverId not resolved");
+            return;
+        }
 
         var client = MinecraftClient.getInstance();
         var world = client.world;

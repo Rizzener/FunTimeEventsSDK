@@ -61,6 +61,10 @@ public final class BanTracker implements Tracker {
         if (serverId <= 0) {
             serverId = ctx.getServerId();
         }
+        if (serverId < 0) {
+            FteLogger.warn(FteLogger.TRACK, "BanTracker skipped: serverId not resolved for " + playerName);
+            return;
+        }
         String serverType = ctx.getServerType();
 
         BanPayload payload = new BanPayload(serverId, serverType, playerName, reason, end);
