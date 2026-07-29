@@ -10,11 +10,11 @@ The ONLY reliable workflow is standalone SDK build + mavenLocal consumption.
 ```bash
 # Step 1: Build SDK and publish to local Maven
 cd C:\dev\FunTimeEventsSDK
-.\gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0-SNAPSHOT
+.\gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0.1-SNAPSHOT
 
 # Step 2: Clear consumer's Loom cache and build
-cd C:\dev\IDEA\untitled
-Remove-Item -Recurse -Force .gradle -ErrorAction SilentlyContinue
+cd C:\dev\IDEA\FTE_SDK_TEST\v1_21_11
+Remove-Item -Recurse -Force .gradle, build\loom-cache -ErrorAction SilentlyContinue
 .\gradlew :build
 ```
 
@@ -22,7 +22,7 @@ Remove-Item -Recurse -Force .gradle -ErrorAction SilentlyContinue
 ```groovy
 repositories { mavenLocal() }
 dependencies {
-    modImplementation "net.funtimeevents:fte-api:1.0-SNAPSHOT"
+    modImplementation "net.funtimeevents:fte-api:1.0.1-SNAPSHOT"
 }
 ```
 
@@ -49,7 +49,7 @@ The `fabric_api_version` property also falls back to `findProperty("fabric_versi
 
 After ANY SDK code change, the consumer's Loom cache MUST be deleted:
 ```
-C:\dev\IDEA\untitled\.gradle\loom-cache\remapped_mods\remapped\net\funtimeevents\fte-api-*
+C:\dev\IDEA\FTE_SDK_TEST\v1_21_11\build\loom-cache\remapped_working\remapped.net.funtimeevents-fte-api-*.jar
 ```
 
 If forgotten, the consumer will compile and run with OLD SDK code. No warning, no error — just silently stale.
@@ -65,7 +65,7 @@ Remove-Item -Recurse -Force .gradle -ErrorAction SilentlyContinue
 For SDK-only compilation checks (no consumer needed):
 ```bash
 cd C:\dev\FunTimeEventsSDK
-.\gradlew :fte-api:build -Pmod_version=1.0-SNAPSHOT
+.\gradlew :fte-api:build -Pmod_version=1.0.1-SNAPSHOT
 ```
 
 ---
@@ -88,7 +88,8 @@ scheduler/ (1)      Scheduler.java (tick-based, called from ClientTickEvents.END
 model/ (25)         All request payloads + response DTOs (flat package, no subpackages)
 net/ (2+2)          ApiClient.java (REST POST+GET), RelayClient.java (WSS),
                     cache/RelayCache.java, cache/SseCache.java (generic SSE cache)
-util/ (4)           FteLogger.java, GsonHolder.java, PlayerNameUtil.java, ServerDetector.java
+util/ (8)           FteLogger.java, GsonHolder.java, PlayerNameUtil.java, ServerDetector.java,
+                    TextUtil.java, HoverEventUtil.java, TextDisplayUtil.java, BossBarUtil.java
 ```
 
 ### Data flow
@@ -246,12 +247,15 @@ postJson("/mines/players-around", ...)
 
 ## Cross-version compatibility (1.21.x)
 
-The SDK uses **reflection** for Minecraft APIs that differ between Yarn mapping versions:
+The SDK uses **reflection utility classes** for Minecraft APIs that differ between Yarn mapping versions — all 5 reflection points are centralized in `util/`:
 
-1. **`HoverEvent.Action.SHOW_TEXT`** (BanTracker) — `getAction()`, `getValue()` via reflection
-2. **`TextDisplayEntity`** (DungeonTracker) — detected by class name `getSimpleName().contains("textdisplay")`, then `getMethod("getText")`
-3. **`BossBarHud.bossBars`** (HellMapTracker) — `getDeclaredField("bossBars")` with `setAccessible(true)`, cached via `volatile` static field
-4. **`GameProfile.getName()/name()`** (PlayerNameUtil) — authlib 7.x broke `getName()` → `name()`, try-first-fallback-second reflection
+| # | Utility class | Reflection target | Cross-version pattern |
+|---|---------------|-------------------|-----------------------|
+| 1 | `HoverEventUtil` | HoverEvent `getAction()` / `getValue()` / `value()` | try-first-fallback-second |
+| 2 | `TextDisplayUtil` | Entity class detection + `getMethod("getText")` | `Class.isInstance` fast-path + `ConcurrentHashMap` cache |
+| 3 | `BossBarUtil` | `BossBarHud.bossBars` field + boss bar `getName()` | single attempt (field name stable across tested versions) |
+| 4 | `PlayerNameUtil` | `GameProfile.getName()` / `name()` | try-first-fallback-second |
+| 5 | `PlayerNameUtil` | `GameProfile.getId()` / `id()` | try-first-fallback-second |
 
 **Do NOT use direct imports** of classes that may differ between Yarn versions. Use `var` for inferred types and reflection for method/field access.
 
@@ -341,10 +345,25 @@ Only declares `"minecraft": ">=1.21.0"`. Does NOT declare `fabric-loader` or `fa
 ### `PlayerNameUtil.extractDonate()`
 Single shared utility for extracting donator prefix from TAB player display names. Used by TabTracker, MineTracker, DungeonTracker. Two overloads: `extractDonate(PlayerEntity)` and `extractDonate(PlayerListEntry)`. Do NOT duplicate this logic in individual trackers.
 
+Has a static `DONATE_CACHE` (ConcurrentHashMap, 30s TTL) — avoids `getDisplayName().getString()` on every poll, shared across all three callers. Also provides `getProfileId(Object)` with `getId()`/`id()` fallback for authlib 7.x.
+
+### TextUtil (`util/TextUtil.java`)
+Fast raw-text access via `Text.getContent()` reflection — avoids `Text.visit()` recursion (`getString()` costs 27% CPU). Two-phase: `tryGetRawText()` returns the string for plain-text content (no allocations from Text tree traversal), falls back to `getString()` only for non-plain content. Caches content class detection in `PLAIN_TEXT_CACHE`.
+
+### TextDisplayUtil (`util/TextDisplayUtil.java`)
+Wraps `getTextMethod` reflection and `TEXT_DISPLAY_CLASS_CACHE` for TextDisplay entities. Adds `RESOLVED_TEXT_DISPLAY_CLASS` fast-path: after the first TextDisplay entity is resolved, uses `Class.isInstance()` (single JVM instruction) instead of `ConcurrentHashMap.computeIfAbsent` per entity. Also uses `TextUtil.tryGetRawText()` in `getDisplayText()`.
+
+### HoverEventUtil (`util/HoverEventUtil.java`)
+Wraps `getAction()`/`getValue()` reflection with `value()` fallback. Provides `extractHoverText(Text)` with recursive sibling search — previously inline in BanTracker.
+
+### BossBarUtil (`util/BossBarUtil.java`)
+Wraps `bossBars` field reflection and boss bar `getName()` method. Provides `getBossBars()` and `getBossBarName(Object)` — previously inline in HellMapTracker.
+
 ### DungeonTracker optimizations
 - Only scans when local player is INSIDE a dungeon zone (checks player position first)
 - Uses `((ClientWorld) world).getEntities()` — the method is on ClientWorld, not World
-- Caches `getTextMethod` via volatile static field (one-time resolution)
+- Text display entity detection and getText reflection now in `TextDisplayUtil`
+- `scanPlayers()` has a local `donateCache` (synchronized LinkedHashMap, 128 max, 30s TTL) — avoids `extractDonate()` getString() per player on every tick
 
 ### ServerDetector
 - `isFuntime(ip)` — checks `*.funtime.su` / `.sh` / `.me` / `.store` / `.network` / `.wiki`

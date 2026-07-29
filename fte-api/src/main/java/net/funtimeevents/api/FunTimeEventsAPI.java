@@ -1,5 +1,6 @@
 package net.funtimeevents.api;
 
+import net.fabricmc.loader.api.FabricLoader;
 import net.funtimeevents.bootstrap.Bootstrap;
 import net.funtimeevents.model.BansListResponse;
 import net.funtimeevents.model.CaptchaResponse;
@@ -53,6 +54,20 @@ public final class FunTimeEventsAPI {
      */
     public static FteConfig.Builder builder() {
         return new FteConfig.Builder();
+    }
+
+    /**
+     * Returns the SDK version (e.g. {@code "1.0.1"}).
+     *
+     * <p>Reads from {@code fabric.mod.json} at runtime.
+     *
+     * @return the version string, or {@code "unknown"} if the mod container is not found
+     */
+    public static String getVersion() {
+        return FabricLoader.getInstance()
+                .getModContainer("fte-api")
+                .map(c -> c.getMetadata().getVersion().getFriendlyString())
+                .orElse("unknown");
     }
 
     static FunTimeEventsAPI create(FteConfig.Builder configBuilder) {

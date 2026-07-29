@@ -67,6 +67,8 @@ public final class ServerDetector {
             return null;
         }
         var displayName = sidebar.getDisplayName();
-        return displayName != null ? displayName.getString() : null;
+        if (displayName == null) return null;
+        String raw = TextUtil.tryGetRawText(displayName);
+        return raw != null ? raw : displayName.getString();
     }
 }

@@ -38,7 +38,7 @@
 
 ```bash
 cd C:\dev\FunTimeEventsSDK
-.\gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0-SNAPSHOT
+.\gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0.1-SNAPSHOT
 ```
 
 ### Шаг 2: Подключение в `build.gradle` (Groovy DSL)
@@ -49,7 +49,7 @@ repositories {
 }
 
 dependencies {
-    modImplementation "net.funtimeevents:fte-api:1.0-SNAPSHOT"
+    modImplementation "net.funtimeevents:fte-api:1.0.1-SNAPSHOT"
 }
 ```
 
@@ -74,7 +74,8 @@ fte-api/src/main/java/net/funtimeevents/
   model/             — 25 DTO классов (Payload + Response)
   net/               — ApiClient.java (REST), RelayClient.java (WSS)
     cache/           — RelayCache.java, SseCache.java (кеши)
-  util/              — FteLogger.java, GsonHolder.java, PlayerNameUtil.java, ServerDetector.java
+  util/              — FteLogger.java, GsonHolder.java, PlayerNameUtil.java, ServerDetector.java,
+                       TextUtil.java, HoverEventUtil.java, TextDisplayUtil.java, BossBarUtil.java
 ```
 
 ### Data Flow
@@ -293,9 +294,7 @@ FunTimeEventsAPI.solveCaptcha("base64-encoded-png")
 
 ### 1. BanTracker (`tracker/ban/BanTracker.java`)
 
-Парсит сообщения чата на предмет бана — извлекает имя игрока, причину, длительность и сервер через hover-текст (рефлексия).
-
-**Рефлексия:** `HoverEvent.Action.SHOW_TEXT` — `getAction()`, `getValue()` (разные названия в 1.21.x).
+Парсит сообщения чата на предмет бана — извлекает имя игрока, причину, длительность и сервер через hover-текст (`HoverEventUtil.extractHoverText()`).
 
 ### 2. TabTracker (`tracker/tab/TabTracker.java`)
 
@@ -306,14 +305,14 @@ FunTimeEventsAPI.solveCaptcha("base64-encoded-png")
 ### 3. DungeonTracker (`tracker/dungeon/DungeonTracker.java`)
 
 Сканирует Медный данж и Город Вардена. Оптимизация: сканирует только когда игрок ВНУТРИ зоны данжа (проверяет позицию). Собирает:
-- Сундуки (координаты + время до закрытия)
+- Сундуки (координаты + время до закрытия) — через `TextDisplayUtil.getDisplayText()`
 - Игроков (имя, донат, экипировка, инвиз)
 
-**Рефлексия:** `TextDisplayEntity` определяется по имени класса (`getSimpleName().contains("textdisplay")`), метод `getText` — через `getMethod("getText")`.
+**Оптимизация:** donate-кеш в `scanPlayers()` (synchronized LinkedHashMap, 30s TTL) — `PlayerNameUtil.extractDonate()` вызывается только при промахе кеша.
 
 ### 4. HellMapTracker (`tracker/hell/HellMapTracker.java`)
 
-Читает боссбар через рефлексию: `BossBarHud.bossBars` — `getDeclaredField("bossBars")`, кеширует через `volatile` static.
+Читает боссбар через `BossBarUtil.getBossBars()` и `BossBarUtil.getBossBarName()` — рефлексия `bossBars` поля + `getName()` в отдельной утилите.
 
 ### 5. MineTracker (`tracker/mine/MineTracker.java`)
 
@@ -384,11 +383,13 @@ FunTimeEventsAPI.builder()
 
 ## Cross-version compatibility (1.21.x)
 
-SDK использует **рефлексию** для API Minecraft, которые отличаются в разных версиях Yarn-маппингов:
+SDK использует **утилиты рефлексии** для API Minecraft, которые отличаются в разных версиях Yarn-маппингов (все 5 точек сведены в `util/`):
 
-1. **`HoverEvent.Action.SHOW_TEXT`** (BanTracker) — `getAction()`, `getValue()` через рефлексию
-2. **`TextDisplayEntity`** (DungeonTracker) — определяется по имени класса, `getMethod("getText")`
-3. **`BossBarHud.bossBars`** (HellMapTracker) — `getDeclaredField("bossBars")`, кеш через `volatile` static
+1. **`HoverEventUtil`** — `getAction()` / `getValue()` / `value()` fallback
+2. **`TextDisplayUtil`** — определение TextDisplay через `Class.isInstance` + кеш
+3. **`BossBarUtil`** — `BossBarHud.bossBars` поле + `getName()`
+4. **`PlayerNameUtil`** — `GameProfile.getName()` / `name()` fallback
+5. **`PlayerNameUtil`** — `GameProfile.getId()` / `id()` fallback
 
 Стабильные импорты (безопасны во всех версиях):
 - `MinecraftClient`, `PlayerEntity`, `Blocks`, `Text`, `EquipmentSlot`
@@ -405,12 +406,46 @@ SDK использует **рефлексию** для API Minecraft, котор
 GsonHolder.INSTANCE  // Единый Gson для всего SDK
 ```
 
+### TextUtil
+
+```java
+TextUtil.tryGetRawText(Text text);
+// Быстрый доступ к plain-text без Text.visit() — null для не-plain контента
+```
+
+### HoverEventUtil
+
+```java
+HoverEventUtil.extractHoverText(Text message);
+// Извлекает hover-текст из сообщения (рекурсивный поиск по siblings)
+```
+
+### TextDisplayUtil
+
+```java
+TextDisplayUtil.isTextDisplay(Entity entity);
+TextDisplayUtil.getDisplayText(Entity entity);
+// Определяет TextDisplay entity и получает текст через рефлексию getText()
+// Fast-path: Class.isInstance() после первого разрешения класса
+```
+
+### BossBarUtil
+
+```java
+BossBarUtil.getBossBars();     // Map<?, ?> или null
+BossBarUtil.getBossBarName(Object bar);  // Text или null
+```
+
 ### PlayerNameUtil
 
 ```java
 PlayerNameUtil.extractDonate(PlayerEntity player);
 PlayerNameUtil.extractDonate(PlayerListEntry entry);
 // Возвращает донат-префикс (всё до имени в display name)
+// Имеет статический DONATE_CACHE с TTL 30с (ConcurrentHashMap)
+
+PlayerNameUtil.getProfileName(Object profile);   // getName() / name() fallback
+PlayerNameUtil.getProfileId(Object profile);     // getId() / id() fallback
 ```
 
 ### ServerDetector
@@ -427,6 +462,7 @@ ServerDetector.getSidebarTitle();       // Текст сайдбара
 ## Известные особенности
 
 1. **Кодировка:** Windows-консоль должна быть в UTF-8: `chcp 65001`
-2. **Loom-кеш:** После любого изменения SDK — удалять `.gradle\loom-cache\remapped_mods\remapped\net\funtimeevents\` в consumer-проекте
+2. **Loom-кеш:** После любого изменения SDK — удалять `.gradle\loom-cache\remapped_mods\remapped\net\funtimeevents\` в проекте
 3. **Gradle daemon:** При проблемах — `.\gradlew --stop` перед очисткой кеша
 4. **fabric.mod.json:** НЕ объявляет `fabric-loader` и `fabric-api` — они предоставляются consumer-модом
+5. **Версия SDK:** `FunTimeEventsAPI.getVersion()` — читает из `fabric.mod.json` в рантайме

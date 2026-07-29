@@ -8,6 +8,7 @@ import net.funtimeevents.tracker.Tracker;
 import net.funtimeevents.tracker.server.ServerContext;
 import net.funtimeevents.util.FteLogger;
 import net.funtimeevents.util.PlayerNameUtil;
+import net.funtimeevents.util.TextDisplayUtil;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientWorld;
@@ -17,15 +18,16 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.registry.Registries;
-import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,10 +38,17 @@ public final class DungeonTracker implements Tracker {
     private static final Zone WARDEN_ZONE = new Zone("Warden", -2100, -1900, -2100, -1900, -60, 0);
     private static final Zone COPPER_ZONE = new Zone("Copper", 1900, 2100, 1900, 2100, -60, 5);
 
-    private static volatile java.lang.reflect.Method getTextMethod;
-    private static final Map<Class<?>, Boolean> TEXT_DISPLAY_CLASS_CACHE = new ConcurrentHashMap<>();
-
     private final PayloadSender sender;
+
+    private final Map<UUID, String> donateCache = Collections.synchronizedMap(
+            new LinkedHashMap<>(64, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<UUID, String> eldest) {
+                    return size() > 128;
+                }
+            }
+    );
+    private volatile long donateCacheResetAt = 0L;
 
     private record Zone(String name, int minX, int maxX, int minZ, int maxZ, int minY, int maxY) {
         boolean contains(int x, int z) {
@@ -122,6 +131,12 @@ public final class DungeonTracker implements Tracker {
     }
 
     private List<PlayerGearInfo> scanPlayers(World world, Zone zone) {
+        long now = System.currentTimeMillis();
+        if (now - donateCacheResetAt > 30_000L) {
+            donateCache.clear();
+            donateCacheResetAt = now;
+        }
+
         List<PlayerGearInfo> result = new ArrayList<>();
         for (PlayerEntity player : world.getPlayers()) {
             BlockPos pos = player.getBlockPos();
@@ -130,7 +145,10 @@ public final class DungeonTracker implements Tracker {
             }
 
             String name = PlayerNameUtil.getProfileName(player.getGameProfile());
-            String donate = PlayerNameUtil.extractDonate(player);
+            String donate = donateCache.computeIfAbsent(
+                    player.getUuid(),
+                    id -> PlayerNameUtil.extractDonate(player)
+            );
             String helmet = itemName(player.getEquippedStack(EquipmentSlot.HEAD));
             String chestplate = itemName(player.getEquippedStack(EquipmentSlot.CHEST));
             String leggings = itemName(player.getEquippedStack(EquipmentSlot.LEGS));
@@ -147,7 +165,7 @@ public final class DungeonTracker implements Tracker {
 
         if (world instanceof ClientWorld clientWorld) {
             for (Entity e : clientWorld.getEntities()) {
-                String text = getDisplayText(e);
+                String text = TextDisplayUtil.getDisplayText(e);
                 if (text == null || text.isEmpty()) {
                     continue;
                 }
@@ -178,33 +196,6 @@ public final class DungeonTracker implements Tracker {
             }
         }
         return result;
-    }
-
-    private String getDisplayText(Entity entity) {
-        if (isTextDisplay(entity)) {
-            try {
-                if (getTextMethod == null) {
-                    getTextMethod = entity.getClass().getMethod("getText");
-                }
-                if (getTextMethod != null) {
-                    var result = getTextMethod.invoke(entity);
-                    if (result instanceof Text text) {
-                        return text.getString().trim();
-                    }
-                }
-            } catch (Exception e) {
-                FteLogger.debug(FteLogger.TRACK, "getDisplayText failed: " + e.getMessage());
-            }
-        }
-        var name = entity.getCustomName();
-        return name != null ? name.getString().trim() : null;
-    }
-
-    private static boolean isTextDisplay(Entity entity) {
-        return TEXT_DISPLAY_CLASS_CACHE.computeIfAbsent(entity.getClass(), cls -> {
-            String simple = cls.getSimpleName().toLowerCase();
-            return simple.contains("textdisplay") || simple.contains("text_display");
-        });
     }
 
     private String itemName(ItemStack stack) {

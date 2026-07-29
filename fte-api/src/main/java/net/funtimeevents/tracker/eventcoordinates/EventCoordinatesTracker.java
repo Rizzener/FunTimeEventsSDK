@@ -6,7 +6,9 @@ import net.funtimeevents.spi.PayloadSender;
 import net.funtimeevents.tracker.Tracker;
 import net.funtimeevents.tracker.server.ServerContext;
 import net.funtimeevents.util.FteLogger;
+import net.funtimeevents.util.TextUtil;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
+import net.minecraft.text.Text;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -27,11 +29,15 @@ public final class EventCoordinatesTracker implements Tracker {
             if (!active || !ServerContext.getInstance().isOnFuntime()) {
                 return;
             }
-            handleMessage(message.getString());
+            handleMessage(message);
         });
     }
 
-    private void handleMessage(String text) {
+    private void handleMessage(Text message) {
+        String quick = TextUtil.tryGetRawText(message);
+        if (quick != null && !quick.contains("|||")) return;
+
+        String text = message.getString();
         Matcher eventMatcher = EVENT_PATTERN.matcher(text);
         if (!eventMatcher.find()) {
             return;

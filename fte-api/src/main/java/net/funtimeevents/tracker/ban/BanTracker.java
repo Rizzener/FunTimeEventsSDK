@@ -5,11 +5,11 @@ import net.funtimeevents.spi.PayloadSender;
 import net.funtimeevents.tracker.Tracker;
 import net.funtimeevents.tracker.server.ServerContext;
 import net.funtimeevents.util.FteLogger;
+import net.funtimeevents.util.HoverEventUtil;
+import net.funtimeevents.util.TextUtil;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.text.Text;
 
-import java.lang.reflect.Method;
-import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,9 +20,6 @@ public final class BanTracker implements Tracker {
     private static final Pattern HOVER_REASON_PATTERN = Pattern.compile("Причина:\\s*(.+)");
     private static final Pattern HOVER_END_PATTERN = Pattern.compile("(?:До|Наказание|Бан до|Окончание):\\s*(.+)");
     private static final Pattern HOVER_SERVER_PATTERN = Pattern.compile("Сервер:\\s*(.+)");
-
-    private static volatile Method GET_ACTION_METHOD;
-    private static volatile Method GET_VALUE_METHOD;
 
     private final PayloadSender sender;
     private volatile boolean active;
@@ -44,13 +41,16 @@ public final class BanTracker implements Tracker {
     }
 
     private void handleMessage(Text message) {
+        String quick = TextUtil.tryGetRawText(message);
+        if (quick != null && !quick.contains("[♨]")) return;
+
         String plainText = message.getString();
         Matcher matcher = BAN_PATTERN.matcher(plainText);
         if (!matcher.find()) {
             return;
         }
         String playerName = matcher.group(1);
-        String hoverText = extractHoverText(message);
+        String hoverText = HoverEventUtil.extractHoverText(message);
         FteLogger.info(FteLogger.TRACK, "Ban detected: player=" + playerName + ", hover=" + hoverText);
 
         String reason = parseReason(hoverText);
@@ -65,64 +65,6 @@ public final class BanTracker implements Tracker {
 
         BanPayload payload = new BanPayload(serverId, serverType, playerName, reason, end);
         sender.sendBan(payload);
-    }
-
-    private String extractHoverText(Text message) {
-        return findHoverText(message).orElse("");
-    }
-
-    private Optional<String> findHoverText(Text component) {
-        var hoverEvent = component.getStyle().getHoverEvent();
-        if (hoverEvent != null) {
-            try {
-                Method getAction = resolveGetAction(hoverEvent);
-                if (getAction == null) return Optional.empty();
-                Object action = getAction.invoke(hoverEvent);
-                if (action != null && action.toString().contains("show_text")) {
-                    Method getValue = resolveGetValue(hoverEvent, action.getClass());
-                    if (getValue == null) return Optional.empty();
-                    Object value = getValue.getParameterCount() > 0
-                            ? getValue.invoke(hoverEvent, action)
-                            : getValue.invoke(hoverEvent);
-                    if (value instanceof Text hoverText) {
-                        return Optional.of(hoverText.getString());
-                    }
-                }
-            } catch (Exception e) {
-                FteLogger.debug(FteLogger.TRACK, "Hover text extraction failed: " + e.getMessage());
-            }
-        }
-        for (Text sibling : component.getSiblings()) {
-            var result = findHoverText(sibling);
-            if (result.isPresent()) {
-                return result;
-            }
-        }
-        return Optional.empty();
-    }
-
-    private static Method resolveGetAction(Object hoverEvent) {
-        if (GET_ACTION_METHOD != null) return GET_ACTION_METHOD;
-        try {
-            GET_ACTION_METHOD = hoverEvent.getClass().getMethod("getAction");
-        } catch (Exception e) {
-            FteLogger.debug(FteLogger.TRACK, "getAction method not found: " + e.getMessage());
-        }
-        return GET_ACTION_METHOD;
-    }
-
-    private static Method resolveGetValue(Object hoverEvent, Class<?> actionClass) {
-        if (GET_VALUE_METHOD != null) return GET_VALUE_METHOD;
-        try {
-            GET_VALUE_METHOD = hoverEvent.getClass().getMethod("getValue", actionClass);
-        } catch (NoSuchMethodException e) {
-            try {
-                GET_VALUE_METHOD = hoverEvent.getClass().getMethod("value");
-            } catch (NoSuchMethodException e2) {
-                FteLogger.debug(FteLogger.TRACK, "getValue/value method not found");
-            }
-        }
-        return GET_VALUE_METHOD;
     }
 
     static String parseReason(String hoverText) {
