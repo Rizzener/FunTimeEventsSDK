@@ -81,7 +81,9 @@ public final class BanTracker implements Tracker {
                 if (action != null && action.toString().contains("show_text")) {
                     Method getValue = resolveGetValue(hoverEvent, action.getClass());
                     if (getValue == null) return Optional.empty();
-                    Object value = getValue.invoke(hoverEvent, action);
+                    Object value = getValue.getParameterCount() > 0
+                            ? getValue.invoke(hoverEvent, action)
+                            : getValue.invoke(hoverEvent);
                     if (value instanceof Text hoverText) {
                         return Optional.of(hoverText.getString());
                     }
@@ -113,8 +115,12 @@ public final class BanTracker implements Tracker {
         if (GET_VALUE_METHOD != null) return GET_VALUE_METHOD;
         try {
             GET_VALUE_METHOD = hoverEvent.getClass().getMethod("getValue", actionClass);
-        } catch (Exception e) {
-            FteLogger.debug(FteLogger.TRACK, "getValue method not found: " + e.getMessage());
+        } catch (NoSuchMethodException e) {
+            try {
+                GET_VALUE_METHOD = hoverEvent.getClass().getMethod("value");
+            } catch (NoSuchMethodException e2) {
+                FteLogger.debug(FteLogger.TRACK, "getValue/value method not found");
+            }
         }
         return GET_VALUE_METHOD;
     }

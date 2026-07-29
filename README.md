@@ -3,7 +3,7 @@
 
 # FunTimeEvents SDK
 
-![Minecraft](https://img.shields.io/badge/Minecraft-1.21.x%20|%2026.x-green?logo=minecraft)
+![Minecraft](https://img.shields.io/badge/Minecraft-1.21.4%20|%201.21.8%20|%201.21.11-green?logo=minecraft)
 ![Fabric](https://img.shields.io/badge/Fabric_Loader-0.16+-orange?logo=fabricmc)
 ![Java](https://img.shields.io/badge/Java-21-blue?logo=openjdk)
 ![License](https://img.shields.io/badge/License-MIT-white)

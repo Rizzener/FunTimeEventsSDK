@@ -2,11 +2,10 @@ package net.funtimeevents.tracker.tab;
 
 import net.funtimeevents.model.ObservedPlayer;
 import net.funtimeevents.tracker.Tracker;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.PlayerListEntry;
-
 import net.funtimeevents.util.FteLogger;
 import net.funtimeevents.util.PlayerNameUtil;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.network.PlayerListEntry;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -37,7 +36,7 @@ public final class TabTracker implements Tracker {
         String now = Instant.now().toString();
         List<ObservedPlayer> result = new ArrayList<>();
         for (PlayerListEntry entry : handler.getPlayerList()) {
-            String name = entry.getProfile().getName();
+            String name = PlayerNameUtil.getProfileName(entry.getProfile());
             String donate = PlayerNameUtil.extractDonate(entry);
             result.add(new ObservedPlayer(name, donate, now));
         }

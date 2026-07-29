@@ -55,10 +55,10 @@ public final class ServerDetector {
 
     public static String getSidebarTitle() {
         var client = MinecraftClient.getInstance();
-        if (client.player == null) {
+        if (client.world == null) {
             return null;
         }
-        Scoreboard scoreboard = client.player.getScoreboard();
+        var scoreboard = client.world.getScoreboard();
         if (scoreboard == null) {
             return null;
         }

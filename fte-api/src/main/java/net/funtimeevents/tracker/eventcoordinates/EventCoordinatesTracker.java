@@ -53,9 +53,19 @@ public final class EventCoordinatesTracker implements Tracker {
             }
         }
 
+        ServerContext ctx = ServerContext.getInstance();
+        if (x == null || y == null || z == null
+                || level == null || level.isBlank()
+                || eventName.isBlank()
+                || ctx.getServerId() < 0) {
+            FteLogger.debug(FteLogger.TRACK, "Event coords skipped (incomplete): event=" + eventName
+                    + " level=" + level + " coords=[" + x + ", " + y + ", " + z + "]"
+                    + " serverId=" + ctx.getServerId());
+            return;
+        }
+
         FteLogger.info(FteLogger.TRACK, "Event coords: " + eventName + " level=" + level + " coords=[" + x + ", " + y + ", " + z + "]");
 
-        ServerContext ctx = ServerContext.getInstance();
         EventCoordinatesPayload payload = new EventCoordinatesPayload(
                 ctx.getServerId(), ctx.getServerType(),
                 eventName, level,

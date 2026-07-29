@@ -129,7 +129,7 @@ public final class DungeonTracker implements Tracker {
                 continue;
             }
 
-            String name = player.getGameProfile().getName();
+            String name = PlayerNameUtil.getProfileName(player.getGameProfile());
             String donate = PlayerNameUtil.extractDonate(player);
             String helmet = itemName(player.getEquippedStack(EquipmentSlot.HEAD));
             String chestplate = itemName(player.getEquippedStack(EquipmentSlot.CHEST));

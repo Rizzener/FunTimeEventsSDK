@@ -251,6 +251,7 @@ The SDK uses **reflection** for Minecraft APIs that differ between Yarn mapping 
 1. **`HoverEvent.Action.SHOW_TEXT`** (BanTracker) — `getAction()`, `getValue()` via reflection
 2. **`TextDisplayEntity`** (DungeonTracker) — detected by class name `getSimpleName().contains("textdisplay")`, then `getMethod("getText")`
 3. **`BossBarHud.bossBars`** (HellMapTracker) — `getDeclaredField("bossBars")` with `setAccessible(true)`, cached via `volatile` static field
+4. **`GameProfile.getName()/name()`** (PlayerNameUtil) — authlib 7.x broke `getName()` → `name()`, try-first-fallback-second reflection
 
 **Do NOT use direct imports** of classes that may differ between Yarn versions. Use `var` for inferred types and reflection for method/field access.
 
@@ -293,7 +294,7 @@ cd test-ver
 python version-test/build_matrix.py
 ```
 
-**Runtime reflection check** at `test-ver/testmod/` — a standalone Fabric mod (`FteVersionCheckMod`) that validates the 3 reflection points (bossBars field, TextDisplayEntity.getText, HoverEvent accessors) at runtime under the current Minecraft version. Compile-check alone doesn't catch reflection issues:
+**Runtime reflection check** at `test-ver/testmod/` — a standalone Fabric mod (`FteVersionCheckMod`) that validates the 4 reflection points (bossBars field, TextDisplayEntity.getText, HoverEvent accessors, GameProfile.getName/name) at runtime under the current Minecraft version. Compile-check alone doesn't catch reflection issues:
 ```bash
 cd test-ver/testmod
 ./gradlew runClient
