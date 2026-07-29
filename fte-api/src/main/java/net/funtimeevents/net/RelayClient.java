@@ -15,6 +15,7 @@ import com.google.gson.Gson;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.WebSocket;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.CompletionStage;
@@ -103,7 +104,12 @@ public final class RelayClient implements PayloadSender {
             @Override
             public void onOpen(WebSocket ws) {
                 webSocket = ws;
-                String auth = GSON.toJson(Map.of("type", "auth", "api_key", apiKey));
+                var authMsg = new HashMap<String, Object>();
+                authMsg.put("type", "auth");
+                if (apiKey != null && !apiKey.isBlank()) {
+                    authMsg.put("api_key", apiKey);
+                }
+                String auth = GSON.toJson(authMsg);
                 ws.sendText(auth, true);
                 WebSocket.Listener.super.onOpen(ws);
             }

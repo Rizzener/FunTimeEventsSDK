@@ -29,7 +29,7 @@ import java.util.concurrent.CompletableFuture;
  * <pre>{@code
  * FunTimeEventsAPI.builder()
  *     .userAgent("MyMod/1.0")
- *     .apiKey("sk-fte-...")
+ *     // .apiKey("sk-fte-...")    // optional
  *     .build();
  * }</pre>
  */
@@ -71,7 +71,7 @@ public final class FunTimeEventsAPI {
                 throw new IllegalArgumentException("userAgent is required");
             }
             if (!config.offlineMode() && (config.apiKey() == null || config.apiKey().isBlank())) {
-                throw new IllegalArgumentException("apiKey is required in online mode");
+                FteLogger.warn(FteLogger.CORE, "apiKey not set — relying on proxy for auth");
             }
 
             FteLogger.setLevel(config.logLevel());

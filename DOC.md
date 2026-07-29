@@ -25,8 +25,8 @@
 
 ## Требования
 
-- **Java 21**
-- **Minecraft 1.21.x**
+- **Java 21+**
+- **Minecraft 1.21.x** (Проверено на 1.21.4, 1.21.8, 1.21.11)
 - **Fabric Loader** 0.16+
 - **Fabric API**
 
@@ -53,20 +53,9 @@ dependencies {
 }
 ```
 
-### Шаг 3: В `settings.gradle` — **НЕ** добавлять `include(":fte-api")`
-
-Инклюд проектов ломает Fabric Loom. SDK подключается только через mavenLocal.
-
-### Шаг 4: Очистка Loom-кеша после обновления SDK
-
-```powershell
-# В папке consumer-проекта:
-Remove-Item -Recurse -Force .gradle\loom-cache\remapped_mods\remapped\net\funtimeevents\ -ErrorAction SilentlyContinue
-```
-
 ---
 
-## Архитектура (41 Java-файл)
+## Архитектура
 
 ```
 fte-api/src/main/java/net/funtimeevents/
@@ -98,8 +87,6 @@ Tracker (например BanTracker)
         → JSON POST или WebSocket-фрейм
 ```
 
-Нет EventBus. Трекеры отправляют напрямую через `PayloadSender`. Все данные уходят на бэкенд.
-
 ---
 
 ## Инициализация
@@ -118,7 +105,7 @@ FunTimeEventsAPI.builder()
 ```java
 FunTimeEventsAPI.builder()
     .userAgent("MyMod/1.0")           // REQUIRED
-    .apiKey("sk-fte-...")             // REQUIRED в онлайн-режиме
+    // .apiKey("sk-fte-...")          // опционально, если через прокси
     .build();                          // WSS по умолчанию
 ```
 
@@ -127,7 +114,7 @@ FunTimeEventsAPI.builder()
 ```java
 FunTimeEventsAPI.builder()
     .userAgent("MyMod/1.0")
-    .apiKey("sk-fte-...")
+    // .apiKey("sk-fte-...")    // опционально
     .disableWebSocket()               // Все POST через HTTP
     .build();
 ```
@@ -139,7 +126,7 @@ FunTimeEventsAPI.builder()
 | Метод | По умолчанию | Описание |
 |-------|-------------|----------|
 | `.userAgent(String)` | **обязательный** | User-Agent для всех HTTP-запросов |
-| `.apiKey(String)` | — | Ключ для X-API-Key (обязателен в online) |
+| `.apiKey(String)` | — | Ключ для X-API-Key (опционально, если через прокси) |
 | `.baseUrl(String)` | `https://api.funtimeevents.su/v1/` | URL бэкенда |
 | `.logLevel(LogLevel)` | `INFO` | `OFF`, `ERROR`, `WARN`, `INFO`, `DEBUG` |
 | `.tickIntervalSeconds(int)` | `10` | Периодичность сканирования трекеров (мин. 1) |
@@ -158,7 +145,7 @@ FunTimeEventsAPI.builder()
 ```java
 FunTimeEventsAPI.builder()
     .userAgent("MyMod/1.0")
-    .apiKey("sk-fte-client-xxx")
+    // .apiKey("sk-fte-...")          // опционально
     .logLevel(FteConfig.LogLevel.DEBUG)
     .tickIntervalSeconds(5)
     .disableScanTabPlayers()

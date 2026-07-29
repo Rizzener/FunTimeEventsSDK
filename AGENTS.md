@@ -141,7 +141,7 @@ if (config.dungeonEnabled()) trackers.add(new DungeonTracker(sender));
 ```java
 FunTimeEventsAPI.builder()
     .userAgent("ModName/1.0")       // REQUIRED
-    .apiKey("sk-fte-...")           // REQUIRED in online mode
+    // .apiKey("sk-fte-...")        // optional, rely on proxy
     .baseUrl("https://host/v1/")    // default: api.funtimeevents.su/v1/
     .logLevel(LogLevel.DEBUG)       // default: INFO
     .disableScanTabPlayers()        // disable individual trackers
@@ -158,7 +158,7 @@ Defaults:
 - `tickIntervalSeconds = 10` (stored as 200 ticks)
 - All trackers enabled
 
-Validation: `userAgent` is required. `apiKey` is required when not offline. `baseUrl` defaults if not set.
+Validation: `userAgent` is required. `apiKey` is optional (proxy adds it). `baseUrl` defaults if not set.
 
 ### Compression (.disableCompression())
 

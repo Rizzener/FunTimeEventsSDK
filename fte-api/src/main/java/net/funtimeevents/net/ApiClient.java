@@ -125,9 +125,11 @@ public final class ApiClient implements PayloadSender {
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl + path))
                 .header("Content-Type", "application/json")
-                .header("X-API-Key", apiKey)
                 .header("User-Agent", userAgent)
                 .timeout(TIMEOUT);
+        if (apiKey != null && !apiKey.isBlank()) {
+            requestBuilder.header("X-API-Key", apiKey);
+        }
         if (useCompression) {
             body = gzip(body);
             requestBuilder.header("Content-Encoding", "gzip");
@@ -198,13 +200,15 @@ public final class ApiClient implements PayloadSender {
                     .collect(Collectors.joining("&"));
             String uri = baseUrl + path + (query.isEmpty() ? "" : "?" + query);
 
-            HttpRequest request = HttpRequest.newBuilder()
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(URI.create(uri))
-                    .header("X-API-Key", apiKey)
                     .header("User-Agent", userAgent)
                     .timeout(TIMEOUT)
-                    .GET()
-                    .build();
+                    .GET();
+            if (apiKey != null && !apiKey.isBlank()) {
+                requestBuilder.header("X-API-Key", apiKey);
+            }
+            HttpRequest request = requestBuilder.build();
 
             return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                     .thenApply(response -> {
@@ -227,14 +231,16 @@ public final class ApiClient implements PayloadSender {
 
     private CompletableFuture<HttpResponse<java.io.InputStream>> stream(String path) {
         try {
-            HttpRequest request = HttpRequest.newBuilder()
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(URI.create(baseUrl + path))
-                    .header("X-API-Key", apiKey)
                     .header("User-Agent", userAgent)
                     .header("Accept", "text/event-stream")
                     .timeout(Duration.ZERO)
-                    .GET()
-                    .build();
+                    .GET();
+            if (apiKey != null && !apiKey.isBlank()) {
+                requestBuilder.header("X-API-Key", apiKey);
+            }
+            HttpRequest request = requestBuilder.build();
 
             return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofInputStream());
         } catch (Exception e) {

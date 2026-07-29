@@ -5,7 +5,7 @@
 
 ![Minecraft](https://img.shields.io/badge/Minecraft-1.21.4%20|%201.21.8%20|%201.21.11-green?logo=minecraft)
 ![Fabric](https://img.shields.io/badge/Fabric_Loader-0.16+-orange?logo=fabricmc)
-![Java](https://img.shields.io/badge/Java-21-blue?logo=openjdk)
+![Java](https://img.shields.io/badge/Java-21+-blue?logo=openjdk)
 ![License](https://img.shields.io/badge/License-MIT-white)
 
 Библиотека создана для проекта [FunTimeEventsBot](https://t.me/FunTimeEventsBot).
@@ -37,25 +37,29 @@ dependencies {
 }
 ```
 
-**Minecraft 1.21:**
-```groovy
-dependencies {
-    modImplementation("net.funtimeevents:fte-api:1.0-SNAPSHOT") {
-        exclude group: "net.fabricmc.fabric-api"
-    }
-}
-```
-
 ### 3. Инициализация
 
 ```java
 FunTimeEventsAPI.builder()
     .userAgent("MyMod/1.0")
-    .apiKey("sk-fte-...")       // обязательно в онлайн-режиме
+    // .apiKey("sk-fte-...")    // опционально, если через прокси
     .build();
 ```
 
 Трекеры запускаются автоматически при входе в мир.
+
+### Прокси (работа без API-ключа)
+
+[FunTimeEventsAPIProxy](https://github.com/Rizzener/FunTimeEventsAPIProxy) — reverse proxy, который перехватывает трафик SDK, добавляет `X-API-Key` и `api_key` для WebSocket-аутентификации. Позволяет запускать SDK без указания `apiKey` в билдере.
+
+```java
+FunTimeEventsAPI.builder()
+    .userAgent("MyMod/1.0")
+    .baseUrl("http://proxy.example.com/v1/")
+    .build();
+```
+
+Подробнее — в репозитории [FunTimeEventsAPIProxy](https://github.com/Rizzener/FunTimeEventsAPIProxy).
 
 ---
 
