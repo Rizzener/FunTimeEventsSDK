@@ -36,9 +36,9 @@ public final class TabTracker implements Tracker {
         String now = Instant.now().toString();
         List<ObservedPlayer> result = new ArrayList<>();
         for (PlayerListEntry entry : handler.getPlayerList()) {
-            String name = PlayerNameUtil.getProfileName(entry.getProfile());
-            String donate = PlayerNameUtil.extractDonate(entry);
-            result.add(new ObservedPlayer(name, donate, now));
+            var info = PlayerNameUtil.resolvePlayer(entry);
+            if (info == null) continue;
+            result.add(new ObservedPlayer(info.name(), info.donate(), now));
         }
         return result;
     }

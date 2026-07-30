@@ -18,11 +18,7 @@ public final class TextUtil {
     public static String tryGetRawText(Text text) {
         try {
             if (GET_CONTENT_METHOD == null) {
-                try {
-                    GET_CONTENT_METHOD = text.getClass().getMethod("getContent");
-                } catch (NoSuchMethodException e) {
-                    GET_CONTENT_METHOD = Text.class.getMethod("getContent");
-                }
+                GET_CONTENT_METHOD = Text.class.getMethod("getContent");
             }
             Object content = GET_CONTENT_METHOD.invoke(text);
             if (content == null) return null;

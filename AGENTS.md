@@ -54,6 +54,11 @@ C:\dev\IDEA\FTE_SDK_TEST\v1_21_11\build\loom-cache\remapped_working\remapped.net
 
 If forgotten, the consumer will compile and run with OLD SDK code. No warning, no error — just silently stale.
 
+**Critical: check the consumer's dependency version** — the consumer's `build.gradle` may reference an old version
+(e.g. `1.0-SNAPSHOT`) while the new code was published as a different version (e.g. `1.0.2-SNAPSHOT`).
+The loom-cache will cache per version, so bumping the SDK version without updating the consumer means
+the consumer never picks up the new code. **Always verify** `consumer/build.gradle` has the matching version.
+
 Additionally, the Gradle daemon can hold stale Loom cache locks. When in doubt:
 ```bash
 .\gradlew --stop

@@ -54,6 +54,7 @@ public final class PlayerNameUtil {
         if (entry.getDisplayName() != null) {
             String displayName = entry.getDisplayName().getString();
             String profileName = getProfileName(entry.getProfile());
+            if (profileName == null || "?".equals(profileName)) return "";
             if (displayName.length() > profileName.length() && displayName.contains(profileName)) {
                 return displayName.substring(0, displayName.indexOf(profileName)).trim();
             }
@@ -74,8 +75,26 @@ public final class PlayerNameUtil {
             return (String) profileNameMethod.invoke(profile);
         } catch (Exception e) {
             FteLogger.warn(FteLogger.TRACK, "failed to get profile name: " + e.getMessage());
-            return "?";
+            return null;
         }
+    }
+
+    public record PlayerInfo(String name, String donate) {}
+
+    public static PlayerInfo resolvePlayer(PlayerEntity player) {
+        String name = getProfileName(player.getGameProfile());
+        if (name == null) return null;
+        String donate = extractDonate(player);
+        if (!donate.startsWith("⚡")) return null;
+        return new PlayerInfo(name, donate);
+    }
+
+    public static PlayerInfo resolvePlayer(PlayerListEntry entry) {
+        String name = getProfileName(entry.getProfile());
+        if (name == null) return null;
+        String donate = extractDonate(entry);
+        if (!donate.startsWith("⚡")) return null;
+        return new PlayerInfo(name, donate);
     }
 
     public static UUID getProfileId(Object profile) {

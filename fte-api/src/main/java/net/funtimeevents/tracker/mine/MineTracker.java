@@ -85,9 +85,9 @@ public final class MineTracker implements Tracker {
                 continue;
             }
 
-            String name = PlayerNameUtil.getProfileName(player.getGameProfile());
-            String donate = PlayerNameUtil.extractDonate(player);
-            playersAround.add(new ObservedPlayer(name, donate, now));
+            var info = PlayerNameUtil.resolvePlayer(player);
+            if (info == null) continue;
+            playersAround.add(new ObservedPlayer(info.name(), info.donate(), now));
         }
 
         if (!playersAround.isEmpty()) {
