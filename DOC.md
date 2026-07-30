@@ -34,14 +34,26 @@
 
 ## Подключение (Build)
 
-### Шаг 1: Сборка SDK и публикация в `mavenLocal`
+### Способ 1: JitPack (рекомендуется)
+
+Без локальной сборки SDK — JitPack собирает автоматически по тегу:
+
+```groovy
+repositories {
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    modImplementation "com.github.Rizzener.FunTimeEventsSDK:fte-api:v1.0.3"
+}
+```
+
+### Способ 2: Локальная сборка (mavenLocal)
 
 ```bash
 cd C:\dev\FunTimeEventsSDK
 .\gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0.3-SNAPSHOT
 ```
-
-### Шаг 2: Подключение в `build.gradle` (Groovy DSL)
 
 ```groovy
 repositories {

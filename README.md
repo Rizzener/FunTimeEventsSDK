@@ -16,7 +16,19 @@
 
 ## Подключение
 
-### 1. Клонирование и сборка SDK
+### Способ 1: JitPack (рекомендуется)
+
+```groovy
+repositories {
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    modImplementation "com.github.Rizzener.FunTimeEventsSDK:fte-api:v1.0.3"
+}
+```
+
+### Способ 2: Локальная сборка (mavenLocal)
 
 ```bash
 git clone https://github.com/Rizzener/FunTimeEventsSDK.git
@@ -24,14 +36,9 @@ cd FunTimeEventsSDK
 .\gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0.3-SNAPSHOT
 ```
 
-### 2. Зависимость в `build.gradle`
-
 ```groovy
 repositories { mavenLocal() }
-```
 
-**Minecraft 1.21.x:**
-```groovy
 dependencies {
     modImplementation "net.funtimeevents:fte-api:1.0.3-SNAPSHOT"
 }
