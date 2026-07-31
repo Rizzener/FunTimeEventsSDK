@@ -1,4 +1,4 @@
 jdk:
   - openjdk21
 install:
-  - ./gradlew :fte-api:publishToMavenLocal -Pmod_version=$VERSION
+  - ./gradlew :fte-api:publishToMavenLocal -Pmod_version=$VERSION -Pjitpack=true

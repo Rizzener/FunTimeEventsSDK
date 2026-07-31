@@ -3,7 +3,8 @@ plugins {
     id("maven-publish")
 }
 
-group = (findProperty("maven_group") as String?) ?: "com.funtimeevents"
+val isJitpack = (findProperty("jitpack") as String?) == "true"
+group = if (isJitpack) "com.github.Rizzener.FunTimeEventsSDK" else ((findProperty("maven_group") as String?) ?: "com.funtimeevents")
 version = (findProperty("mod_version") as String?) ?: "0.1.0"
 base { archivesName = (findProperty("archives_name") as String?) ?: "fte-api" }
 
