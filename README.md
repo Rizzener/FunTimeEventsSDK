@@ -24,7 +24,7 @@ repositories {
 }
 
 dependencies {
-    modImplementation "com.github.Rizzener.FunTimeEventsSDK:fte-api:v1.0.4"
+    modImplementation "com.github.Rizzener.FunTimeEventsSDK:fte-api:v1.0.5"
 }
 ```
 
@@ -33,14 +33,14 @@ dependencies {
 ```bash
 git clone https://github.com/Rizzener/FunTimeEventsSDK.git
 cd FunTimeEventsSDK
-.\gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0.4-SNAPSHOT
+.\gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0.5-SNAPSHOT
 ```
 
 ```groovy
 repositories { mavenLocal() }
 
 dependencies {
-    modImplementation "net.funtimeevents:fte-api:1.0.4-SNAPSHOT"
+    modImplementation "net.funtimeevents:fte-api:1.0.5-SNAPSHOT"
 }
 ```
 
