@@ -10,6 +10,9 @@ public final class SystemInfo {
     @SerializedName("events")
     private int events;
 
+    @SerializedName("user_events")
+    private int userEvents;
+
     @SerializedName("mines")
     private int mines;
 
@@ -26,6 +29,7 @@ public final class SystemInfo {
     private int trackedAnarchies;
 
     public int events() { return events; }
+    public int userEvents() { return userEvents; }
     public int mines() { return mines; }
     public int copperDungeons() { return copperDungeons; }
     public int wardenCities() { return wardenCities; }

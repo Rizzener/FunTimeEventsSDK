@@ -30,7 +30,7 @@ import java.util.concurrent.CompletableFuture;
  * <pre>{@code
  * FunTimeEventsAPI.builder()
  *     .userAgent("MyMod/1.0")
- *     // .apiKey("sk-fte-...")    // optional
+ *     .apiKey("sk-fte-...")          // required
  *     .build();
  * }</pre>
  */
@@ -40,6 +40,7 @@ public final class FunTimeEventsAPI {
     private static ApiClient restClient;
     private static RelayClient wsClient;
     private static SseCache<EventResponse> eventCache;
+    private static SseCache<EventResponse> userEventCache;
     private static SseCache<MineResponse> mineCache;
     private static SseCache<LootAreaResponse> copperCache;
     private static SseCache<LootAreaResponse> wardenCache;
@@ -86,7 +87,7 @@ public final class FunTimeEventsAPI {
                 throw new IllegalArgumentException("userAgent is required");
             }
             if (!config.offlineMode() && (config.apiKey() == null || config.apiKey().isBlank())) {
-                FteLogger.warn(FteLogger.CORE, "apiKey not set — relying on proxy for auth");
+                throw new IllegalArgumentException("apiKey is required");
             }
 
             FteLogger.setLevel(config.logLevel());
@@ -108,8 +109,10 @@ public final class FunTimeEventsAPI {
                     sender = wsClient;
                 } else {
                     sender = restClient;
-                    eventCache = new SseCache<>("FTE-EventStream", EventResponse.class, EventResponse::name);
+                    eventCache = new SseCache<>("FTE-EventStream", EventResponse.class, FunTimeEventsAPI::systemEventKey);
                     eventCache.start(restClient.streamEvents());
+                    userEventCache = new SseCache<>("FTE-UserEventStream", EventResponse.class, FunTimeEventsAPI::userEventKey);
+                    userEventCache.start(restClient.streamUserEvents());
                     mineCache = new SseCache<>("FTE-MineStream", MineResponse.class, m -> m.serverId() + "_" + m.rarity());
                     mineCache.start(restClient.streamMines());
                     copperCache = new SseCache<>("FTE-CopperStream", LootAreaResponse.class, l -> String.valueOf(l.serverId()));
@@ -149,6 +152,24 @@ public final class FunTimeEventsAPI {
      */
     public static CompletableFuture<String> fetchEvents(Map<String, String> params) {
         return restClient != null ? restClient.getEvents(params) : CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * Fetches active user events (event_type=user) from the backend.
+     *
+     * @param params optional query parameters (e.g. {@code Map.of("server_id", "4")})
+     * @return JSON response as a raw string
+     * @see #getUserEvents() for a cached, typed view
+     */
+    public static CompletableFuture<String> fetchUserEvents(Map<String, String> params) {
+        if (restClient == null) return CompletableFuture.completedFuture(null);
+        if (params == null || !params.containsKey("event_type")) {
+            java.util.HashMap<String, String> merged = new java.util.HashMap<>();
+            if (params != null) merged.putAll(params);
+            merged.put("event_type", "user");
+            params = merged;
+        }
+        return restClient.getEvents(params);
     }
 
     /**
@@ -214,6 +235,37 @@ public final class FunTimeEventsAPI {
         if (relayCache != null) return relayCache.getEvents();
         if (eventCache != null) return eventCache.getData();
         return List.of();
+    }
+
+    /**
+     * Returns locally cached active user events (airdrops, altars, beacons),
+     * updated automatically from the relay (WSS mode) or SSE stream (REST mode).
+     *
+     * @return never {@code null}; empty list when no data is available
+     */
+    public static List<EventResponse> getUserEvents() {
+        if (relayCache != null) return relayCache.getUserEvents();
+        if (userEventCache != null) return userEventCache.getData();
+        return List.of();
+    }
+
+    private static String systemEventKey(EventResponse e) {
+        StringBuilder sb = new StringBuilder();
+        if (e.serverType() != null) sb.append(e.serverType());
+        sb.append(e.serverId());
+        return sb.toString();
+    }
+
+    private static String userEventKey(EventResponse e) {
+        StringBuilder sb = new StringBuilder();
+        if (e.serverType() != null) sb.append(e.serverType());
+        sb.append(e.serverId()).append(':');
+        sb.append(e.eventId() != null ? e.eventId() : e.name() != null ? e.name() : "?");
+        if (e.coordinates() != null) {
+            sb.append(':').append(e.coordinates().x()).append(':')
+              .append(e.coordinates().y()).append(':').append(e.coordinates().z());
+        }
+        return sb.toString();
     }
 
     /**

@@ -117,8 +117,8 @@ public final class FteConfig {
         }
         /**
          * Sets the API key for backend authentication.
-         * Optional — if omitted, requests are sent without X-API-Key
-         * (e.g. when a proxy adds it).
+         * <strong>Required.</strong> Each client must have its own key —
+         * issue scoped keys per client and rotate them if compromised.
          */
         public Builder apiKey(String apiKey) {
             this.apiKey = apiKey; return this;

@@ -13,6 +13,15 @@ public final class EventResponse {
     @SerializedName("server_type")
     private String serverType;
 
+    @SerializedName("event_type")
+    private String eventType;
+
+    @SerializedName("event_id")
+    private String eventId;
+
+    @SerializedName("phase")
+    private String phase;
+
     @SerializedName("name")
     private String name;
 
@@ -42,6 +51,9 @@ public final class EventResponse {
 
     public int serverId() { return serverId; }
     public String serverType() { return serverType; }
+    public String eventType() { return eventType; }
+    public String eventId() { return eventId; }
+    public String phase() { return phase; }
     public String name() { return name; }
     public String status() { return status; }
     public int timeLeft() { return timeLeft; }

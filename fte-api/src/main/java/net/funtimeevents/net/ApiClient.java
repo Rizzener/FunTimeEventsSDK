@@ -106,6 +106,10 @@ public final class ApiClient implements PayloadSender {
         return stream("/events/stream");
     }
 
+    public CompletableFuture<HttpResponse<java.io.InputStream>> streamUserEvents() {
+        return stream("/events/stream?event_type=user");
+    }
+
     public CompletableFuture<HttpResponse<java.io.InputStream>> streamMines() {
         return stream("/mines/stream");
     }
@@ -235,7 +239,6 @@ public final class ApiClient implements PayloadSender {
                     .uri(URI.create(baseUrl + path))
                     .header("User-Agent", userAgent)
                     .header("Accept", "text/event-stream")
-                    .timeout(Duration.ZERO)
                     .GET();
             if (apiKey != null && !apiKey.isBlank()) {
                 requestBuilder.header("X-API-Key", apiKey);

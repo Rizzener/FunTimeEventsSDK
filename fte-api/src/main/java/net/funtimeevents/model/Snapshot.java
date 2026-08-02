@@ -15,6 +15,9 @@ public final class Snapshot {
     @SerializedName("events")
     private List<EventResponse> events;
 
+    @SerializedName("user_events")
+    private List<EventResponse> userEvents;
+
     @SerializedName("mines")
     private List<MineResponse> mines;
 
@@ -32,6 +35,7 @@ public final class Snapshot {
 
     public String type() { return type; }
     public List<EventResponse> events() { return events; }
+    public List<EventResponse> userEvents() { return userEvents; }
     public List<MineResponse> mines() { return mines; }
     public List<LootAreaResponse> copperDungeons() { return copperDungeons; }
     public List<LootAreaResponse> wardenCities() { return wardenCities; }

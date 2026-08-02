@@ -10,7 +10,7 @@ The ONLY reliable workflow is standalone SDK build + mavenLocal consumption.
 ```bash
 # Step 1: Build SDK and publish to local Maven
 cd C:\dev\FunTimeEventsSDK
-.\gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0.3-SNAPSHOT
+.\gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0.4-SNAPSHOT
 
 # Step 2: Clear consumer's Loom cache and build
 cd C:\dev\IDEA\FTE_SDK_TEST\v1_21_11
@@ -22,7 +22,7 @@ Remove-Item -Recurse -Force .gradle, build\loom-cache -ErrorAction SilentlyConti
 ```groovy
 repositories { mavenLocal() }
 dependencies {
-    modImplementation "net.funtimeevents:fte-api:1.0.3-SNAPSHOT"
+    modImplementation "net.funtimeevents:fte-api:1.0.4-SNAPSHOT"
 }
 ```
 
@@ -55,7 +55,7 @@ C:\dev\IDEA\FTE_SDK_TEST\v1_21_11\build\loom-cache\remapped_working\remapped.net
 If forgotten, the consumer will compile and run with OLD SDK code. No warning, no error — just silently stale.
 
 **Critical: check the consumer's dependency version** — the consumer's `build.gradle` may reference an old version
-(e.g. `1.0-SNAPSHOT`) while the new code was published as a different version (e.g. `1.0.3-SNAPSHOT`).
+(e.g. `1.0-SNAPSHOT`) while the new code was published as a different version (e.g. `1.0.4-SNAPSHOT`).
 The loom-cache will cache per version, so bumping the SDK version without updating the consumer means
 the consumer never picks up the new code. **Always verify** `consumer/build.gradle` has the matching version.
 
@@ -70,7 +70,7 @@ Remove-Item -Recurse -Force .gradle -ErrorAction SilentlyContinue
 For SDK-only compilation checks (no consumer needed):
 ```bash
 cd C:\dev\FunTimeEventsSDK
-.\gradlew :fte-api:build -Pmod_version=1.0.3-SNAPSHOT
+.\gradlew :fte-api:build -Pmod_version=1.0.4-SNAPSHOT
 ```
 
 ---
@@ -147,7 +147,7 @@ if (config.dungeonEnabled()) trackers.add(new DungeonTracker(sender));
 ```java
 FunTimeEventsAPI.builder()
     .userAgent("ModName/1.0")       // REQUIRED
-    // .apiKey("sk-fte-...")        // optional, rely on proxy
+    .apiKey("sk-fte-...")           // REQUIRED (per-client key, rotate on compromise)
     .baseUrl("https://host/v1/")    // default: api.funtimeevents.su/v1/
     .logLevel(LogLevel.DEBUG)       // default: INFO
     .disableScanTabPlayers()        // disable individual trackers
@@ -164,7 +164,8 @@ Defaults:
 - `tickIntervalSeconds = 10` (stored as 200 ticks)
 - All trackers enabled
 
-Validation: `userAgent` is required. `apiKey` is optional (proxy adds it). `baseUrl` defaults if not set.
+Validation: `userAgent` and `apiKey` are required (`apiKey` may be omitted only in offline mode).
+`baseUrl` defaults if not set. Each client uses its own key — issue scoped keys and rotate on compromise.
 
 ### Compression (.disableCompression())
 
@@ -182,7 +183,7 @@ WebSocket (RelayClient) does NOT use gzip — `sendBinary()` breaks Python backe
 | Cached data | RelayCache (snapshots) | SseCache (SSE streams) |
 | Base URL transform | `https://`→`wss://` + `/relay` | — |
 
-Both modes provide identical typed `get*()` methods: `getEvents()`, `getMines()`, `getCopperDungeons()`, `getWardenCities()`. `getSystemInfo()` only works in WSS mode.
+Both modes provide identical typed `get*()` methods: `getEvents()`, `getUserEvents()`, `getMines()`, `getCopperDungeons()`, `getWardenCities()`. `getSystemInfo()` only works in WSS mode.
 
 ### RelayClient connection lifecycle
 

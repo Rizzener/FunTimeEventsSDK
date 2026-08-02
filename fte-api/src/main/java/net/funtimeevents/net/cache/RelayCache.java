@@ -1,5 +1,6 @@
 package net.funtimeevents.net.cache;
 
+import net.funtimeevents.model.EventCoordinates;
 import net.funtimeevents.model.EventResponse;
 import net.funtimeevents.model.LootAreaResponse;
 import net.funtimeevents.model.MineResponse;
@@ -19,6 +20,7 @@ public final class RelayCache {
     private static final double STALE_SECONDS = 5.0;
 
     private final Map<String, EventResponse> events = new ConcurrentHashMap<>();
+    private final Map<String, EventResponse> userEvents = new ConcurrentHashMap<>();
     private final Map<String, MineResponse> mines = new ConcurrentHashMap<>();
     private final Map<Integer, LootAreaResponse> copperDungeons = new ConcurrentHashMap<>();
     private final Map<Integer, LootAreaResponse> wardenCities = new ConcurrentHashMap<>();
@@ -37,7 +39,13 @@ public final class RelayCache {
             if (snapshot.events() != null) {
                 events.clear();
                 for (EventResponse e : snapshot.events()) {
-                    events.put(e.name(), e);
+                    events.put(systemEventKey(e), e);
+                }
+            }
+            if (snapshot.userEvents() != null) {
+                userEvents.clear();
+                for (EventResponse e : snapshot.userEvents()) {
+                    userEvents.put(userEventKey(e), e);
                 }
             }
             if (snapshot.mines() != null) {
@@ -72,6 +80,25 @@ public final class RelayCache {
         }
     }
 
+    private static String systemEventKey(EventResponse e) {
+        StringBuilder sb = new StringBuilder();
+        if (e.serverType() != null) sb.append(e.serverType());
+        sb.append(e.serverId());
+        return sb.toString();
+    }
+
+    private static String userEventKey(EventResponse e) {
+        StringBuilder sb = new StringBuilder();
+        if (e.serverType() != null) sb.append(e.serverType());
+        sb.append(e.serverId()).append(':');
+        sb.append(e.eventId() != null ? e.eventId() : e.name() != null ? e.name() : "?");
+        EventCoordinates c = e.coordinates();
+        if (c != null) {
+            sb.append(':').append(c.x()).append(':').append(c.y()).append(':').append(c.z());
+        }
+        return sb.toString();
+    }
+
     private boolean isStale() {
         double age = (System.nanoTime() - lastUpdateNanos) / 1_000_000_000.0;
         return age > STALE_SECONDS;
@@ -80,6 +107,11 @@ public final class RelayCache {
     public List<EventResponse> getEvents() {
         if (isStale()) { events.clear(); return List.of(); }
         return List.copyOf(events.values());
+    }
+
+    public List<EventResponse> getUserEvents() {
+        if (isStale()) { userEvents.clear(); return List.of(); }
+        return List.copyOf(userEvents.values());
     }
 
     public List<MineResponse> getMines() {

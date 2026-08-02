@@ -24,7 +24,7 @@ repositories {
 }
 
 dependencies {
-    modImplementation "com.github.Rizzener.FunTimeEventsSDK:fte-api:v1.0.3"
+    modImplementation "com.github.Rizzener.FunTimeEventsSDK:fte-api:v1.0.4"
 }
 ```
 
@@ -33,14 +33,14 @@ dependencies {
 ```bash
 git clone https://github.com/Rizzener/FunTimeEventsSDK.git
 cd FunTimeEventsSDK
-.\gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0.3-SNAPSHOT
+.\gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0.4-SNAPSHOT
 ```
 
 ```groovy
 repositories { mavenLocal() }
 
 dependencies {
-    modImplementation "net.funtimeevents:fte-api:1.0.3-SNAPSHOT"
+    modImplementation "net.funtimeevents:fte-api:1.0.4-SNAPSHOT"
 }
 ```
 
@@ -49,19 +49,20 @@ dependencies {
 ```java
 FunTimeEventsAPI.builder()
     .userAgent("MyMod/1.0")
-    // .apiKey("sk-fte-...")    // опционально, если через прокси
+    .apiKey("sk-fte-...")
     .build();
 ```
 
 Трекеры запускаются автоматически при входе в мир.
 
-### Прокси (работа без API-ключа)
+### Прокси (скрытие IP клиента)
 
-[FunTimeEventsAPIProxy](https://github.com/Rizzener/FunTimeEventsAPIProxy) — reverse proxy, который перехватывает трафик SDK, добавляет `X-API-Key` и `api_key` для WebSocket-аутентификации. Позволяет запускать SDK без указания `apiKey` в билдере.
+[FunTimeEventsAPIProxy](https://github.com/Rizzener/FunTimeEventsAPIProxy) — прозрачный reverse proxy: форвардит запросы и ключ как есть, скрывая реальный IP клиента от бэкенда.
 
 ```java
 FunTimeEventsAPI.builder()
     .userAgent("MyMod/1.0")
+    .apiKey("sk-fte-...")
     .baseUrl("http://proxy.example.com/v1/")
     .build();
 ```
@@ -80,6 +81,7 @@ FunTimeEventsAPI.builder()
 - Координаты ивентов — парсинг чата по регуляркам
 - Капча — всегда через REST
 - GET-запросы к бэкенду — события, шахты, игроки, баны, данжи
+- User-ивенты — аирдропы, алтари нежити, загадочные маяки (`getUserEvents()`)
 - WSS (релеи, снапшоты каждую секунду) или REST (SSE-стримы)
 - Любой трекер отключается в билдере
 

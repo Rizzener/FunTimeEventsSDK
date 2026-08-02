@@ -44,7 +44,7 @@ repositories {
 }
 
 dependencies {
-    modImplementation "com.github.Rizzener.FunTimeEventsSDK:fte-api:v1.0.3"
+    modImplementation "com.github.Rizzener.FunTimeEventsSDK:fte-api:v1.0.4"
 }
 ```
 
@@ -52,7 +52,7 @@ dependencies {
 
 ```bash
 cd C:\dev\FunTimeEventsSDK
-.\gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0.3-SNAPSHOT
+.\gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0.4-SNAPSHOT
 ```
 
 ```groovy
@@ -61,7 +61,7 @@ repositories {
 }
 
 dependencies {
-    modImplementation "net.funtimeevents:fte-api:1.0.3-SNAPSHOT"
+    modImplementation "net.funtimeevents:fte-api:1.0.4-SNAPSHOT"
 }
 ```
 
@@ -118,7 +118,7 @@ FunTimeEventsAPI.builder()
 ```java
 FunTimeEventsAPI.builder()
     .userAgent("MyMod/1.0")           // REQUIRED
-    // .apiKey("sk-fte-...")          // опционально, если через прокси
+    .apiKey("sk-fte-...")             // REQUIRED
     .build();                          // WSS по умолчанию
 ```
 
@@ -127,7 +127,7 @@ FunTimeEventsAPI.builder()
 ```java
 FunTimeEventsAPI.builder()
     .userAgent("MyMod/1.0")
-    // .apiKey("sk-fte-...")    // опционально
+    .apiKey("sk-fte-...")             // REQUIRED
     .disableWebSocket()               // Все POST через HTTP
     .build();
 ```
@@ -139,7 +139,7 @@ FunTimeEventsAPI.builder()
 | Метод | По умолчанию | Описание |
 |-------|-------------|----------|
 | `.userAgent(String)` | **обязательный** | User-Agent для всех HTTP-запросов |
-| `.apiKey(String)` | — | Ключ для X-API-Key (опционально, если через прокси) |
+| `.apiKey(String)` | **обязательный** | Ключ для X-API-Key — свой на каждого клиента, ротировать при компрометации |
 | `.baseUrl(String)` | `https://api.funtimeevents.su/v1/` | URL бэкенда |
 | `.logLevel(LogLevel)` | `INFO` | `OFF`, `ERROR`, `WARN`, `INFO`, `DEBUG` |
 | `.tickIntervalSeconds(int)` | `10` | Периодичность сканирования трекеров (мин. 1) |
@@ -158,7 +158,7 @@ FunTimeEventsAPI.builder()
 ```java
 FunTimeEventsAPI.builder()
     .userAgent("MyMod/1.0")
-    // .apiKey("sk-fte-...")          // опционально
+    .apiKey("sk-fte-...")             // REQUIRED
     .logLevel(FteConfig.LogLevel.DEBUG)
     .tickIntervalSeconds(5)
     .disableScanTabPlayers()
@@ -200,11 +200,12 @@ CompletableFuture<BansListResponse> bans       = FunTimeEventsAPI.fetchBans(Map.
 
 ```java
 // Обновляются автоматически. Возвращают пустой список, если данных нет или они устарели >5 сек.
-List<EventResponse>       events  = FunTimeEventsAPI.getEvents();
-List<MineResponse>        mines   = FunTimeEventsAPI.getMines();
-List<LootAreaResponse>    copper  = FunTimeEventsAPI.getCopperDungeons();
-List<LootAreaResponse>    warden  = FunTimeEventsAPI.getWardenCities();
-SystemInfo                info    = FunTimeEventsAPI.getSystemInfo(); // null в REST-режиме
+List<EventResponse>       events     = FunTimeEventsAPI.getEvents();     // системные ивенты
+List<EventResponse>       userEvents = FunTimeEventsAPI.getUserEvents(); // user-ивенты (аирдропы, алтари, маяки)
+List<MineResponse>        mines      = FunTimeEventsAPI.getMines();
+List<LootAreaResponse>    copper     = FunTimeEventsAPI.getCopperDungeons();
+List<LootAreaResponse>    warden     = FunTimeEventsAPI.getWardenCities();
+SystemInfo                info       = FunTimeEventsAPI.getSystemInfo(); // null в REST-режиме
 ```
 
 ### Captcha (всегда REST, `POST /captcha`)

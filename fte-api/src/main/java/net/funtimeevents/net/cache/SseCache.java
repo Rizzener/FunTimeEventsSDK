@@ -4,6 +4,7 @@ import net.funtimeevents.util.FteLogger;
 import net.funtimeevents.util.GsonHolder;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import java.io.BufferedReader;
@@ -90,9 +91,16 @@ public final class SseCache<T> {
 
     private void process(String json) {
         try {
-            JsonObject root = GSON.fromJson(json, JsonObject.class);
-            if (!root.has("data") || root.get("data").isJsonNull()) return;
-            JsonArray items = root.getAsJsonArray("data");
+            JsonElement root = GSON.fromJson(json, JsonElement.class);
+            if (root == null || root.isJsonNull()) return;
+            JsonArray items;
+            if (root.isJsonArray()) {
+                items = root.getAsJsonArray();
+            } else {
+                JsonObject obj = root.getAsJsonObject();
+                if (!obj.has("data") || obj.get("data").isJsonNull()) return;
+                items = obj.getAsJsonArray("data");
+            }
             store.clear();
             for (var item : items) {
                 T obj = GSON.fromJson(item, type);
