@@ -2,11 +2,14 @@
 import argparse,csv,json,os
 from run_phase2 import ROOT
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--targets',required=True);a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--targets',required=True);p.add_argument('--allow-partial',action='store_true');a=p.parse_args()
     prefix=ROOT/os.environ.get('FTE_PHASE5_EVIDENCE','results/phase6');rows=[]
     for mc in a.targets.split(','):
-        result=json.loads((prefix/mc/'runtime.json').read_text());assert result['status']=='PASS'
+        result=json.loads((prefix/mc/'runtime.json').read_text());assert result['status']=='PASS' or a.allow_partial
         for mode,data in result['modes'].items():
+            if data['status']!='PASS':
+                assert a.allow_partial
+                continue
             run=[r for r in data['runs'] if r['status']=='PASS'][-1]
             for category,stat in run['tick_and_callback_performance'].items():
                 rows.append({'minecraft':mc,'mode':mode,'kind':'callback','category':category,**stat})

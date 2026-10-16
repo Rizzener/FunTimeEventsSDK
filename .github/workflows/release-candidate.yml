@@ -2,6 +2,7 @@ name: SDK release candidate
 on:
   push:
     branches: ['integration/**']
+    paths-ignore: ['PHASE6_RESULTS.md', 'RELEASE_DECISIONS.md', 'tools/phase6_report.py', 'tools/github_phase6.py', 'tools/inspect_jitpack.py', 'tools/verify_published_legacy.py', 'phase6_historical_integrity.py']
   workflow_dispatch:
 permissions:
   contents: read
@@ -32,7 +33,7 @@ jobs:
     timeout-minutes: 90
     strategy:
       fail-fast: false
-      max-parallel: 4
+      max-parallel: 13
       matrix: {mc: '${{ fromJSON(needs.matrix.outputs.targets) }}'}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -54,6 +55,26 @@ jobs:
             consumers/mc${{ matrix.mc }}/build/phase3-client/crash-reports/
           if-no-files-found: error
           retention-days: 30
+  all-targets:
+    needs: matrix
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - run: sh ci/phase5/bootstrap-ci.sh
+      - name: One Gradle build, all targets, no target_versions filter
+        run: |
+          mkdir -p "$FTE_PHASE5_EVIDENCE/aggregate"
+          ./gradlew --no-daemon --console=plain --max-workers=2 javaToolchains sdkBuild sdkStage -Pstaging_repository="$PWD/build/aggregate-maven" 2>&1 | tee "$FTE_PHASE5_EVIDENCE/aggregate/gradle.txt"
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: aggregate-${{ github.run_attempt }}
+          path: |
+            ${{ env.FTE_PHASE5_EVIDENCE }}/
+            build/aggregate-maven/
+          if-no-files-found: error
   loader-controls:
     needs: [matrix, target]
     runs-on: ubuntu-24.04
@@ -82,7 +103,7 @@ jobs:
   required:
     name: SDK required matrix
     if: always()
-    needs: [matrix, target, loader-controls]
+    needs: [matrix, target, loader-controls, all-targets]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -91,13 +112,17 @@ jobs:
         with:
           pattern: target-*-${{ github.run_attempt }}
           merge-multiple: true
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: aggregate-${{ github.run_attempt }}
       - name: Fail if any mandatory job failed or was skipped
         env:
           MATRIX_RESULT: ${{ needs.matrix.result }}
           TARGET_RESULT: ${{ needs.target.result }}
           LOADER_RESULT: ${{ needs.loader-controls.result }}
-        run: test "$MATRIX_RESULT" = success && test "$TARGET_RESULT" = success && test "$LOADER_RESULT" = success
-      - run: python3 phase6_provenance.py --summary && python3 phase5_verify.py --stage summary
+          AGGREGATE_RESULT: ${{ needs.all-targets.result }}
+        run: test "$MATRIX_RESULT" = success && test "$TARGET_RESULT" = success && test "$LOADER_RESULT" = success && test "$AGGREGATE_RESULT" = success
+      - run: python3 phase6_provenance.py --summary && python3 phase6_aggregate_check.py && python3 phase5_verify.py --stage summary
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:

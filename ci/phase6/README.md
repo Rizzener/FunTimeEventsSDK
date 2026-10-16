@@ -12,6 +12,11 @@ substituted for another target, commit, workflow run or workflow attempt.
 and the full functional summary. Configure that exact check as required only
 after reviewing a successful hosted run. No branch protection is changed here.
 
+An additional all-targets job runs `sdkBuild sdkStage` without target filtering.
+The required job compares all 52 Maven files against independent target outputs.
+JDK autodetection is disabled in ephemeral CI: only the two hash-pinned installations
+may satisfy toolchains. Provenance also checks actual production runtime versions.
+
 Pins: targets.json, ci/phase5/jdks.json and ci/phase5/action-pins.json. Historical
 phase5 helper names are retained for traceability. Candidate artifacts are uploaded
 as workflow artifacts; no Maven deployment credentials or remote publication task
