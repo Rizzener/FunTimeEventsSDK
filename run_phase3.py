@@ -13,7 +13,7 @@ import subprocess
 import time
 import zipfile
 import sys
-from run_phase2 import ROOT, gradle, wait_port, terminate_owned,maven_local
+from run_phase2 import ROOT, gradle, wait_port, terminate_owned,maven_local,spawn_owned,capture_owned_threads
 
 
 def diagnostics(run_dir, output, started):
@@ -104,12 +104,15 @@ def run_target(mc, vendor=None, phase4=None, version=None, backend=None, mode=No
         ROOT/'fixtures/server/common/src/main/java/net/funtimeevents/poc/fixture/Phase3Server.java',
         ROOT/'fixtures/data/phase3/tracker-sessions.json']}
     with (output / "server.txt").open('wb') as sl, (output / "client.txt").open('wb') as cl:
-        server = subprocess.Popen(result["server_command"], cwd=ROOT, stdout=sl, stderr=subprocess.STDOUT)
+        server = spawn_owned(result["server_command"], cwd=ROOT, stdout=sl, stderr=subprocess.STDOUT)
         try:
             wait_port(port, server, 240)
             print(mc, "attempt", number, "server ready", flush=True)
-            client = subprocess.Popen(result["client_command"], cwd=ROOT, stdout=cl, stderr=subprocess.STDOUT)
-            result["client_exit"] = client.wait(timeout=600)
+            client = spawn_owned(result["client_command"], cwd=ROOT, stdout=cl, stderr=subprocess.STDOUT)
+            try:result["client_exit"] = client.wait(timeout=600)
+            except subprocess.TimeoutExpired:
+                capture_owned_threads(client,output)
+                raise
             if result["client_exit"] != 0 or not client_json.exists():
                 raise RuntimeError(f"client exit={result['client_exit']}, fresh result={client_json.exists()}")
             result["runtime"] = json.loads(client_json.read_text(encoding='utf-8'))

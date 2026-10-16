@@ -1,8 +1,23 @@
 """Remove only this task's finished example Gradle cache, preserving all evidence."""
-import datetime,hashlib,json,shutil
+import argparse,datetime,hashlib,json,shutil
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 def main():
+    parser=argparse.ArgumentParser();parser.add_argument('--historical-fixture-inputs',action='store_true');args=parser.parse_args()
+    if args.historical_fixture_inputs:
+        removed=[];out=ROOT/'results/phase6/local-environment/historical-regenerable-inputs'/datetime.datetime.now().strftime('%Y%m%d-%H%M%S');out.mkdir(parents=True)
+        for relative in ['poc/multiversion/targets/mc26.3/build/phase3-server','poc/multiversion/consumers/mc26.3/build/phase3-client']:
+            directory=(ROOT/relative).resolve();assert directory.is_relative_to(ROOT/'poc/multiversion') and directory.name in ['phase3-server','phase3-client'] and directory.parent.name=='build'
+            for jar in directory.rglob('*.jar'):
+                if jar.stat().st_size<500_000:continue
+                removed.append({'path':jar.relative_to(ROOT).as_posix(),'bytes':jar.stat().st_size,'sha256':hashlib.sha256(jar.read_bytes()).hexdigest()});jar.unlink()
+            for world in directory.glob('phase3-world-*'):
+                assert world.resolve().parent==directory and not world.is_junction() and not world.is_symlink()
+                for f in world.rglob('*'):
+                    if f.is_file():removed.append({'path':f.relative_to(ROOT).as_posix(),'bytes':f.stat().st_size,'sha256':hashlib.sha256(f.read_bytes()).hexdigest()})
+                shutil.rmtree('\\\\?\\'+str(world))
+        (out/'inventory.json').write_text(json.dumps(removed,indent=2)+'\n')
+        print({'scope':'Only regenerable game libraries/worlds of the completed historical benchmark, never sources, fixture mod JARs, results or dumps','bytes':sum(f['bytes'] for f in removed),'free':shutil.disk_usage(ROOT).free});return
     target=(ROOT/'examples/consumer/.gradle').resolve()
     assert target.is_relative_to(ROOT) and target.parent==ROOT/'examples/consumer' and target.name=='.gradle'
     assert not target.is_symlink() and not target.is_junction()

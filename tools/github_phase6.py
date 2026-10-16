@@ -32,7 +32,7 @@ def download(path,token,target):
     with response,target.open('wb') as f:shutil.copyfileobj(response,f)
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--run-id',type=int,required=True);p.add_argument('--collect',action='store_true');p.add_argument('--cancel-superseded',action='store_true');a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--run-id',type=int,required=True);p.add_argument('--collect',action='store_true');p.add_argument('--collect-available',action='store_true');p.add_argument('--cancel-superseded',action='store_true');p.add_argument('--cancel-reason',default='Superseded by expanded mandatory release checks; no SDK source change.');a=p.parse_args()
     token=credential();run=get(f'actions/runs/{a.run_id}',token);jobs=get(f'actions/runs/{a.run_id}/jobs?per_page=100',token)
     artifacts=get(f'actions/runs/{a.run_id}/artifacts?per_page=100',token)
     out=ROOT/'results/phase6/hosted'/str(a.run_id);out.mkdir(parents=True,exist_ok=True)
@@ -43,13 +43,18 @@ def main():
         assert run['head_branch']=='integration/multiversion-rc' and run['status']!='completed'
         req=request(f'actions/runs/{a.run_id}/cancel',token);req.method='POST'
         with urllib.request.urlopen(req,timeout=30) as response:code=response.status
-        (out/(stamp+'-superseded.json')).write_text(json.dumps({'http_status':code,'reason':'Superseded by mandatory Loader, full public inventory and standalone consumer negative controls; no SDK source change.'},indent=2)+'\n')
+        (out/(stamp+'-superseded.json')).write_text(json.dumps({'http_status':code,'reason':a.cancel_reason},indent=2)+'\n')
         print('SUPERSEDED_CANCEL_REQUESTED',a.run_id,code)
-    print(json.dumps({'id':a.run_id,'status':run['status'],'conclusion':run['conclusion'],'url':run['html_url'],
-        'jobs':[{'id':j['id'],'name':j['name'],'status':j['status'],'conclusion':j['conclusion'],
-                 'failed_steps':[s['name'] for s in j.get('steps',[]) if s['conclusion']=='failure']} for j in jobs['jobs']]},indent=2))
-    if a.collect:
-        assert run['status']=='completed','Collect only immutable completed run outputs'
+    counts={}
+    for j in jobs['jobs']:
+        key=j['conclusion'] or j['status'];counts[key]=counts.get(key,0)+1
+    print(json.dumps({'id':a.run_id,'status':run['status'],'conclusion':run['conclusion'],'url':run['html_url'],'counts':counts,
+        'active_or_failed':[{'id':j['id'],'name':j['name'],'status':j['status'],'conclusion':j['conclusion'],
+                 'active_steps':[s['name'] for s in j.get('steps',[]) if s['status']=='in_progress'],
+                 'failed_steps':[s['name'] for s in j.get('steps',[]) if s['conclusion']=='failure']}
+                 for j in jobs['jobs'] if j['status']=='in_progress' or j['conclusion'] in ['failure','timed_out']]},indent=2))
+    if a.collect or a.collect_available:
+        if a.collect:assert run['status']=='completed','Collect only immutable completed run outputs'
         for artifact in artifacts['artifacts']:
             dest=out/(artifact['name']+'.zip')
             if not dest.exists():download(f"actions/artifacts/{artifact['id']}/zip",token,dest)
@@ -57,7 +62,16 @@ def main():
             with zipfile.ZipFile(dest) as z:
                 assert all((extracted/n).resolve().is_relative_to(extracted.resolve()) for n in z.namelist())
                 z.extractall(extracted)
-        logs=out/'workflow-logs.zip'
-        if not logs.exists():download(f'actions/runs/{a.run_id}/logs',token,logs)
+        if run['status']=='completed':
+            logs=out/'workflow-logs.zip'
+            if not logs.exists():download(f'actions/runs/{a.run_id}/logs',token,logs)
+        for job in jobs['jobs']:
+            if job['status']!='completed':continue
+            log=out/('job-'+str(job['id'])+'.txt')
+            if not log.exists():
+                try:download(f"actions/jobs/{job['id']}/logs",token,log)
+                except urllib.error.HTTPError as error:
+                    if error.code!=404:raise
+                    (out/('job-'+str(job['id'])+'-log-unavailable.json')).write_text(json.dumps({'job':job['id'],'status':job['status'],'conclusion':job['conclusion'],'http_status':404,'note':'GitHub has no log blob, e.g. canceled job that never started. Workflow logs and artifacts retained separately.'},indent=2)+'\n')
 
 if __name__=='__main__':main()

@@ -4,7 +4,7 @@ No remote hosts, SDK servers, or release coordinates are used.
 """
 import argparse, datetime, hashlib, json, os, shutil, socket, subprocess, sys,time
 from pathlib import Path
-from run_phase2 import ROOT, gradle, wait_port, terminate_owned
+from run_phase2 import ROOT, gradle, wait_port, terminate_owned,spawn_owned
 from run_phase3 import run_target
 
 CONFIG=json.loads((ROOT/'targets.json').read_text())
@@ -19,7 +19,7 @@ def backend_start(out,port):
     log=(out/'backend.txt').open('wb')
     command=[sys.executable,'-X','utf8',str(ROOT/'fixtures/fake_backend.py'),'--port',str(port),
              '--output',str(out/'raw.jsonl'),'--tls-dir',str(ROOT/'.evidence/phase4-tls')]
-    process=subprocess.Popen(command,cwd=ROOT,stdout=log,stderr=subprocess.STDOUT)
+    process=spawn_owned(command,cwd=ROOT,stdout=log,stderr=subprocess.STDOUT)
     try:
         deadline=time.monotonic()+40
         while time.monotonic()<deadline:
@@ -108,7 +108,11 @@ if __name__=='__main__':
         for _ in range(a.repeats):
             if a.kind in ['network','hardening']:results.append(network(mc,a.kind))
             else:
-                for mode in a.modes.split(','):results.append(runtime(mc,mode))
+                for mode in a.modes.split(','):
+                    value=runtime(mc,mode);results.append(value)
+                    if value['status']!='PASS':
+                        print('FAIL_CLOSED remaining runtime modes NOT RUN',mc,mode,flush=True)
+                        raise SystemExit(1)
         if a.kind=='runtime':
             from phase5_space import reclaim
             reclaim(mc)

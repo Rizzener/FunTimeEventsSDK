@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import shutil
 import socket
+import signal
 import subprocess
 import time
 
@@ -39,7 +40,42 @@ def wait_port(port: int, process: subprocess.Popen, timeout: int) -> None:
     raise TimeoutError("Fixture server startup timeout")
 
 
+def spawn_owned(*args, **kwargs) -> subprocess.Popen:
+    """Own a Linux process group, so a failed Gradle launcher cannot orphan the game."""
+    if os.name != 'nt':kwargs['start_new_session'] = True
+    process = subprocess.Popen(*args, **kwargs)
+    process.fte_owned_group = process.pid if os.name != 'nt' else None
+    return process
+
+
+def capture_owned_threads(process: subprocess.Popen, output: Path) -> None:
+    if os.name == 'nt' or not getattr(process, 'fte_owned_group', None):return
+    for entry in Path('/proc').iterdir():
+        if not entry.name.isdigit():continue
+        pid=int(entry.name)
+        try:
+            if os.getpgid(pid)!=process.fte_owned_group:continue
+            executable=(entry/'exe').resolve()
+            if executable.name!='java':continue
+            tool=executable.with_name('jcmd')
+            if not tool.exists():continue
+            with (output/('owned-thread-dump-'+str(pid)+'.txt')).open('wb') as log:
+                subprocess.run([str(tool),str(pid),'Thread.print','-l'],stdout=log,stderr=subprocess.STDOUT,timeout=15)
+        except (OSError,subprocess.TimeoutExpired) as error:
+            with (output/'thread-dump-errors.txt').open('a') as log:log.write(str(pid)+': '+repr(error)+'\n')
+
+
 def terminate_owned(process: subprocess.Popen) -> None:
+    group=getattr(process,'fte_owned_group',None)
+    if group:
+        assert group==process.pid and group!=os.getpgrp()
+        try:os.killpg(group,signal.SIGTERM)
+        except ProcessLookupError:return
+        try:process.wait(timeout=10)
+        except subprocess.TimeoutExpired:pass
+        try:os.killpg(group,signal.SIGKILL)
+        except ProcessLookupError:pass
+        return
     if process.poll() is not None:
         return
     if os.name == "nt":
