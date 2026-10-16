@@ -26,6 +26,8 @@ def one(mc):
         module=json.loads((folder/('mc'+mc+'-'+version+'.module')).read_text())
         pom=(folder/('mc'+mc+'-'+version+'.pom')).read_text()
         checks['custom_license_POM']='MIT License with Backend Restriction' in pom and '<name>MIT</name>' not in pom
+        with zipfile.ZipFile(folder/('mc'+mc+'-'+version+'-sources.jar')) as source:
+            checks['source_license_preserved']='LICENSE' in source.namelist() and source.read('LICENSE')==(ROOT/'LICENSE').read_bytes()
         checks['module_coordinates']=module['component']=={'group':config['maven_group'],'module':'mc'+mc,'version':version,'attributes':{'org.gradle.status':'release'}}
         spec=next(t for t in config['targets'] if t['minecraft']==mc)
         checks['java_variant_constraint']=all(v['attributes'].get('org.gradle.jvm.version')==spec['java'] for v in module['variants'] if v['name'] in ['apiElements','runtimeElements'])

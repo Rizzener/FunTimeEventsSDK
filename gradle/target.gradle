@@ -142,6 +142,7 @@ tasks.named('jar', Jar) {
 }
 tasks.named('sourcesJar', Jar) {
     from(project(':core').sourceSets.main.allSource)
+    from(rootProject.file('LICENSE'))
 }
 tasks.named('processResources') {
     inputs.properties(version: project.version, minecraft: mc, java: language)
