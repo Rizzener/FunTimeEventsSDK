@@ -1,0 +1,36 @@
+// Independent project. Run ../../gradlew -p . build -Pminecraft_version=1.21.4
+buildscript {
+    repositories { maven { url='https://maven.fabricmc.net/' }; mavenCentral(); gradlePluginPortal() }
+    dependencies { classpath 'net.fabricmc:fabric-loom:1.17.21' }
+}
+def matrix = new groovy.json.JsonSlurper().parse(file('../../targets.json'))
+def mc = findProperty('minecraft_version') ?: '1.21.4'
+def spec = matrix.targets.find { it.minecraft == mc }
+if(spec == null)throw new GradleException('Unknown Minecraft target: '+mc)
+def legacy=spec.java==21
+apply plugin: legacy ? 'net.fabricmc.fabric-loom-remap' : 'net.fabricmc.fabric-loom'
+version='1.0.0'
+repositories {
+    exclusiveContent {
+        forRepository { maven { url=uri(findProperty('sdk_repository') ?: 'https://jitpack.io') } }
+        filter { includeGroup 'com.github.Rizzener.FunTimeEventsSDK' }
+    }
+    maven { url='https://maven.fabricmc.net/' }
+    mavenCentral()
+}
+java { toolchain.languageVersion=JavaLanguageVersion.of(spec.java as int) }
+tasks.withType(JavaCompile).configureEach { options.release=spec.java as int; options.encoding='UTF-8' }
+def sdk="com.github.Rizzener.FunTimeEventsSDK:mc${mc}:${findProperty('sdk_version') ?: matrix.sdk_version}"
+dependencies {
+    minecraft "com.mojang:minecraft:${mc}"
+    if(legacy)mappings loom.officialMojangMappings()
+    add(legacy?'modImplementation':'implementation',"net.fabricmc:fabric-loader:${matrix.loader}")
+    add(legacy?'modImplementation':'implementation',"net.fabricmc.fabric-api:fabric-api:${spec.fabric_api}")
+    add(legacy?'modImplementation':'implementation',sdk)
+    include sdk
+}
+tasks.named('processResources') {
+    inputs.property('minecraft',mc)
+    inputs.property('java',spec.java)
+    filesMatching('fabric.mod.json') { expand(minecraft:mc,java:spec.java) }
+}

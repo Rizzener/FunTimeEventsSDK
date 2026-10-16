@@ -1,4 +1,6 @@
 jdk:
   - openjdk21
+before_install:
+  - python3 ci/phase5/install_jdks.py --pins ci/phase5/jdks.json --destination "$PWD/.jitpack-jdks"
 install:
-  - ./gradlew :fte-api:publishToMavenLocal -Pmod_version=$VERSION -Pjitpack=true
+  - JAVA_HOME="$PWD/.jitpack-jdks/25" ./gradlew sdkBuild sdkPublishLocal -Pmod_version="$VERSION" -Porg.gradle.java.installations.paths="$PWD/.jitpack-jdks/21,$PWD/.jitpack-jdks/25"

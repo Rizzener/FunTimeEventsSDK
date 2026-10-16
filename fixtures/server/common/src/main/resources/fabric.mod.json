@@ -1,0 +1,9 @@
+{
+  "schemaVersion":1,
+  "id":"fte-phase2-server-fixture",
+  "version":"${version}",
+  "environment":"server",
+  "mixins":["fte-phase3-fixture.mixins.json"],
+  "entrypoints":{"main":["net.funtimeevents.poc.fixture.Phase2Server"]},
+  "depends":{"fabricloader":">=0.19.5","fabric-api":"*","minecraft":"=${minecraft}","java":">=${java}"}
+}

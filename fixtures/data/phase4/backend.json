@@ -1,0 +1,11 @@
+{
+  "events":{"data":[{"server_id":401,"server_type":"anarchy","event_type":"system","event_id":"mystic","phase":"active","name":"Мистический сундук","status":"active","time_left":123,"level":"Эпический","level_updated_at":"2026-10-15T00:00:00Z","coordinates":{"x":-123,"y":64,"z":456},"message":"fixture","event_info":{"mobs_count":17},"updated_at":"2026-10-15T00:00:00Z"}]},
+  "user_events":{"data":[{"server_id":402,"server_type":"anarchy","event_type":"user","event_id":"altar-1","name":"Алтарь","time_left":99,"coordinates":{"x":1,"y":2,"z":3}}]},
+  "mines":{"data":[{"server_id":403,"server_type":"anarchy","rarity":"rare","time":321,"mine_info":{"players_around":[{"player_name":"Near","donate":"⚡NEAR","active":"2026-10-15T00:00:00Z"}],"updated_at":"2026-10-15T00:00:00Z"},"updated_at":"2026-10-15T00:00:00Z"}]},
+  "copper_dungeons":{"data":[{"server_id":404,"server_type":"anarchy","chests":[{"x":2098,"y":-53,"z":2000,"time_left":83,"created_at":"2026-10-15T00:00:00Z"}],"players":[{"player_name":"Good","donate":"⚡VIP","helmet":"diamond_helmet","chestplate":"netherite_chestplate","leggings":"none","boots":"leather_boots","is_invisible":false}]}]},
+  "warden_cities":{"data":[{"server_id":405,"server_type":"anarchy","chests":[],"players":[]}]},
+  "players":{"data":[{"player_name":"Good","donate":"⚡VIP","active":"2026-10-15T00:00:00Z","server_id":401,"server_type":"anarchy","server_history":[{"server_id":400,"server_type":"anarchy","first_seen":"first","last_seen":"last"}]}]},
+  "bans":{"data":[{"server_id":401,"server_type":"anarchy","player_name":"RootBan","reason":"Читы","end":"Навсегда","banned_at":"2026-10-15T00:00:00Z"}]},
+  "captcha":{"solved":true,"text":"1234","overall_percent":98.5,"results":[{"number":"1","confidence_percent":99.0}]},
+  "system_info":{"events":1,"user_events":1,"mines":1,"copper_dungeons":1,"warden_cities":1,"clients_connected":2,"tracked_anarchies":0}
+}

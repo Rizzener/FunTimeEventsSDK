@@ -1,0 +1,80 @@
+name: SDK release candidate
+on:
+  push:
+    branches: ['integration/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: sdk-rc-${{ github.ref }}
+  cancel-in-progress: false
+env:
+  FTE_PHASE5_EVIDENCE: results/phase6/github/${{ github.run_id }}/${{ github.run_attempt }}
+  FTE_MAVEN_LOCAL: ${{ github.workspace }}/.evidence/phase6/maven-local
+  LIBGL_ALWAYS_SOFTWARE: '1'
+  ALSOFT_DRIVERS: 'null'
+defaults:
+  run:
+    shell: bash
+jobs:
+  matrix:
+    runs-on: ubuntu-24.04
+    outputs:
+      targets: ${{ steps.targets.outputs.targets }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - id: targets
+        run: python3 -c 'import json,os; c=json.load(open("targets.json")); assert len(c["targets"])==13; open(os.environ["GITHUB_OUTPUT"],"a").write("targets="+json.dumps([t["minecraft"] for t in c["targets"]])+"\n")'
+  target:
+    needs: matrix
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: {mc: '${{ fromJSON(needs.matrix.outputs.targets) }}'}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - name: Pinned JDKs, Python and Xvfb
+        run: sh ci/phase5/bootstrap-ci.sh
+      - name: Compile, staging, independent consumers, production and network regression
+        run: sh ci/phase6/job.sh '${{ matrix.mc }}'
+      - name: Retain successful and failed attempts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: target-${{ matrix.mc }}-${{ github.run_attempt }}
+          path: |
+            ${{ env.FTE_PHASE5_EVIDENCE }}/
+            build/staging-maven/
+            consumers/mc${{ matrix.mc }}/build/libs/
+            consumers/mc${{ matrix.mc }}/build/phase3-client/hs_err_pid*.log
+            consumers/mc${{ matrix.mc }}/build/phase3-client/crash-reports/
+          if-no-files-found: error
+          retention-days: 30
+  required:
+    name: SDK required matrix
+    if: always()
+    needs: [matrix, target]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: target-*-${{ github.run_attempt }}
+          merge-multiple: true
+      - name: Fail if any mandatory job failed or was skipped
+        env:
+          MATRIX_RESULT: ${{ needs.matrix.result }}
+          TARGET_RESULT: ${{ needs.target.result }}
+        run: test "$MATRIX_RESULT" = success && test "$TARGET_RESULT" = success
+      - run: python3 phase6_provenance.py --summary && python3 phase5_verify.py --stage summary
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: phase6-summary-${{ github.run_attempt }}
+          path: ${{ env.FTE_PHASE5_EVIDENCE }}/
+          if-no-files-found: error

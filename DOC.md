@@ -1,481 +1,169 @@
-# FunTimeEvents SDK — Полная документация
+# FunTimeEventsSDK — руководство разработчика
 
-## О проекте
+## Состояние выпуска
 
-**FunTimeEvents SDK** — клиентская Java-библиотека для Minecraft Fabric, которая автоматически отслеживает игровые события на серверах FunTime и отправляет их на бэкенд.
+Кандидат `2.0.0-rc.1`, не опубликован. Проверка новых артефактов — PHASE6_RESULTS.md.
+Исторический локальный PASS этапа 5 не подменяет новые hosted результаты.
 
-**Зачем:** Мод собирает данные в реальном времени (баны, игроки в TAB, сундуки в данжах, информацию о ивентах, боссбар Адской резни, игроков вокруг авто-шахты на спавне) и отправляет их на централизованный бэкенд через WebSocket Relay или HTTP REST. Бэкенд агрегирует данные со всех подключённых клиентов, позволяя каждому участнику видеть актуальную информацию обо всех анархиях — баны, активные ивенты, шахты, состояние данжей и т.д.
+## Версии и зависимости
 
-### Возможности
+| Minecraft | Java | Fabric API | Maven artifact |
+|---|---:|---|---|
+| 1.21.4 | 21 | `0.113.0+1.21.4` | `mc1.21.4` |
+| 1.21.5 | 21 | `0.128.2+1.21.5` | `mc1.21.5` |
+| 1.21.6 | 21 | `0.128.2+1.21.6` | `mc1.21.6` |
+| 1.21.7 | 21 | `0.129.0+1.21.7` | `mc1.21.7` |
+| 1.21.8 | 21 | `0.136.1+1.21.8` | `mc1.21.8` |
+| 1.21.9 | 21 | `0.134.1+1.21.9` | `mc1.21.9` |
+| 1.21.10 | 21 | `0.138.4+1.21.10` | `mc1.21.10` |
+| 1.21.11 | 21 | `0.141.6+1.21.11` | `mc1.21.11` |
+| 26.1 | 25 | `0.145.1+26.1` | `mc26.1` |
+| 26.1.1 | 25 | `0.145.4+26.1.1` | `mc26.1.1` |
+| 26.1.2 | 25 | `0.155.3+26.1.2` | `mc26.1.2` |
+| 26.2 | 25 | `0.161.0+26.2` | `mc26.2` |
+| 26.3 | 25 | `0.163.0+26.3` | `mc26.3` |
 
-- Отслеживание банов (парсинг hover-текста из чата)
-- Сканирование TAB-листа (имена, донат-префиксы)
-- Сканирование Медного данжа и Города Вардена (сундуки, экипировка игроков)
-- Отслеживание ивентов по координатам
-- Боссбар «Адская резня» — количество мобов
-- Игроки вокруг авто-шахты на спавне (auto-mine)
-- Решение капчи (REST, всегда)
-- GET-запросы к бэкенду (события, шахты, игроки, баны, данжи)
-- SSE-стримы с локальным кешем (REST-режим)
-- WebSocket Relay со снапшотами каждый 1 сек (WSS-режим)
-- Каждый трекер можно отключить в билдере
-- Offline-режим (без сети) для тестов
 
----
+Gradle 9.6.1, Loom 1.17.21, Fabric Loader 0.19.5.
+Для разработки нужны оба JDK (21/25); запускайте wrapper на JDK 25. Для запуска
+consumer нужен JDK из строки Minecraft. Mappings старых версий — официальные Mojang;
+release namespace старых JAR — intermediary после remapJar. Современные JAR используют
+необфусцированные имена и не проходят remap. Не remap-те modern JAR вручную.
 
-## Требования
+### Dependency для каждого target
 
-- **Java 21+**
-- **Minecraft 1.21.x** (Проверено на 1.21.4, 1.21.8, 1.21.11)
-- **Fabric Loader** 0.16+
-- **Fabric API**
+Все строки используют один group и одну версию релиза. Выберите ровно одну:
 
----
+- Minecraft 1.21.4: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.4:2.0.0-rc.1"`
+- Minecraft 1.21.5: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.5:2.0.0-rc.1"`
+- Minecraft 1.21.6: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.6:2.0.0-rc.1"`
+- Minecraft 1.21.7: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.7:2.0.0-rc.1"`
+- Minecraft 1.21.8: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.8:2.0.0-rc.1"`
+- Minecraft 1.21.9: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.9:2.0.0-rc.1"`
+- Minecraft 1.21.10: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.10:2.0.0-rc.1"`
+- Minecraft 1.21.11: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.11:2.0.0-rc.1"`
+- Minecraft 26.1: `implementation "com.github.Rizzener.FunTimeEventsSDK:mc26.1:2.0.0-rc.1"`
+- Minecraft 26.1.1: `implementation "com.github.Rizzener.FunTimeEventsSDK:mc26.1.1:2.0.0-rc.1"`
+- Minecraft 26.1.2: `implementation "com.github.Rizzener.FunTimeEventsSDK:mc26.1.2:2.0.0-rc.1"`
+- Minecraft 26.2: `implementation "com.github.Rizzener.FunTimeEventsSDK:mc26.2:2.0.0-rc.1"`
+- Minecraft 26.3: `implementation "com.github.Rizzener.FunTimeEventsSDK:mc26.3:2.0.0-rc.1"`
 
-## Подключение (Build)
 
-### Способ 1: JitPack (рекомендуется)
+Для распространения добавьте `include` с той же координатой. Для предоставляемого
+отдельно SDK-мода include не нужен, но тогда именно пользователь обязан установить
+подходящий JAR. Не распаковывайте SDK классы в consumer JAR, не relocate-те их и не
+вкладывайте `core` отдельно. Fabric mod ID SDK — `fte-api`; metadata содержит точный
+Minecraft target, Java constraint, Loader и Fabric API dependencies.
 
-Без локальной сборки SDK — JitPack собирает автоматически по тегу:
+### Независимый минимальный consumer
 
-```groovy
-repositories {
-    maven { url 'https://jitpack.io' }
-}
+В examples/consumer нет producer project dependencies или Maven Local. Для RC:
 
-dependencies {
-    modImplementation "com.github.Rizzener.FunTimeEventsSDK:fte-api:v1.0.5"
-}
+```sh
+./gradlew sdkStage -Ptarget_versions=1.21.4
+./gradlew -p examples/consumer build -Pminecraft_version=1.21.4 -Psdk_repository=/absolute/path/to/build/staging-maven
 ```
 
-### Способ 2: Локальная сборка (mavenLocal)
-
-```bash
-cd C:\dev\FunTimeEventsSDK
-.\gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0.5-SNAPSHOT
-```
-
-```groovy
-repositories {
-    mavenLocal()
-}
-
-dependencies {
-    modImplementation "net.funtimeevents:fte-api:1.0.5-SNAPSHOT"
-}
-```
-
----
-
-## Архитектура
-
-```
-fte-api/src/main/java/net/funtimeevents/
-  api/               — FunTimeEventsAPI.java (Builder facade), FteConfig.java (конфиг)
-  spi/               — PayloadSender.java (интерфейс для отправки данных)
-  bootstrap/         — Bootstrap.java (жизненный цикл: JOIN/DISCONNECT)
-  tracker/           — Tracker.java (интерфейс), TrackerManager.java, 8 реализаций
-    ban/             — BanTracker.java
-    dungeon/         — DungeonTracker.java
-    eventcoordinates/— EventCoordinatesTracker.java
-    hell/            — HellMapTracker.java
-    mine/            — MineTracker.java
-    tab/             — TabTracker.java
-    server/          — ServerContext.java (синглтон, детектит сервер)
-  scheduler/         — Scheduler.java (тиковый планировщик)
-  model/             — 25 DTO классов (Payload + Response)
-  net/               — ApiClient.java (REST), RelayClient.java (WSS)
-    cache/           — RelayCache.java, SseCache.java (кеши)
-  util/              — FteLogger.java, GsonHolder.java, PlayerNameUtil.java, ServerDetector.java,
-                       TextUtil.java, HoverEventUtil.java, TextDisplayUtil.java, BossBarUtil.java
-```
-
-### Data Flow
-
-```
-Tracker (например BanTracker)
-  → this.sender.sendBan(payload)     ← PayloadSender (интерфейс)
-     → ApiClient.sendBan()           ← REST-режим (.disableWebSocket())
-     → RelayClient.sendBan()         ← WSS-режим (по умолчанию)
-        → JSON POST или WebSocket-фрейм
-```
-
----
-
-## Инициализация
-
-### Минимальная (offline)
-
-```java
-FunTimeEventsAPI.builder()
-    .userAgent("MyMod/1.0")
-    .build();
-// Трекеры работают, но ничего не отправляют
-```
-
-### Полная (онлайн, WSS — рекомендуется)
-
-```java
-FunTimeEventsAPI.builder()
-    .userAgent("MyMod/1.0")           // REQUIRED
-    .apiKey("sk-fte-...")             // REQUIRED
-    .build();                          // WSS по умолчанию
-```
-
-### REST-режим (без WebSocket)
-
-```java
-FunTimeEventsAPI.builder()
-    .userAgent("MyMod/1.0")
-    .apiKey("sk-fte-...")             // REQUIRED
-    .disableWebSocket()               // Все POST через HTTP
-    .build();
-```
-
----
-
-## Конфигурация Builder (`FteConfig.Builder`)
-
-| Метод | По умолчанию | Описание |
-|-------|-------------|----------|
-| `.userAgent(String)` | **обязательный** | User-Agent для всех HTTP-запросов |
-| `.apiKey(String)` | **обязательный** | Ключ для X-API-Key — свой на каждого клиента, ротировать при компрометации |
-| `.baseUrl(String)` | `https://api.funtimeevents.su/v1/` | URL бэкенда |
-| `.logLevel(LogLevel)` | `INFO` | `OFF`, `ERROR`, `WARN`, `INFO`, `DEBUG` |
-| `.tickIntervalSeconds(int)` | `10` | Периодичность сканирования трекеров (мин. 1) |
-| `.offlineMode()` | — | Без сети (трекеры работают, отправки нет) |
-| `.disableWebSocket()` | — | REST вместо WSS |
-| `.disableCompression()` | — | Отключить gzip для HTTP (WSS всегда без gzip) |
-| `.disableScanTabPlayers()` | — | Отключить TAB-сканер |
-| `.disableBansTracker()` | — | Отключить отслеживание банов |
-| `.disableScanDungeon()` | — | Отключить сканирование данжей |
-| `.disableScanHellMap()` | — | Отключить боссбар Адской резни |
-| `.disableScanMine()` | — | Отключить auto-mine |
-| `.disableEventCoordinatesTracker()` | — | Отключить координаты ивентов |
-
-### Пример гибкой настройки
-
-```java
-FunTimeEventsAPI.builder()
-    .userAgent("MyMod/1.0")
-    .apiKey("sk-fte-...")             // REQUIRED
-    .logLevel(FteConfig.LogLevel.DEBUG)
-    .tickIntervalSeconds(5)
-    .disableScanTabPlayers()
-    .disableScanDungeon()
-    .build();
-```
-
----
-
-## WSS vs REST — что и когда используется
-
-| Аспект | WSS (по умолчанию) | REST (.disableWebSocket()) |
-|--------|-------------------|---------------------------|
-| POST (отправка данных) | RelayClient (WebSocket) | ApiClient (HTTP/1.1) |
-| GET (запросы) | ApiClient (всегда REST) | ApiClient |
-| Captcha | ApiClient (всегда REST) | ApiClient |
-| Кеш данных | RelayCache (снапшоты каждую 1с) | SseCache (SSE-стримы) |
-| SystemInfo | Доступно | null |
-
----
-
-## Public API — статические методы `FunTimeEventsAPI`
-
-### GET-запросы (всегда REST)
-
-```java
-// Сырые JSON-строки:
-CompletableFuture<String> events = FunTimeEventsAPI.fetchEvents(Map.of("server_id", "101"));
-CompletableFuture<String> mines  = FunTimeEventsAPI.fetchMines(Map.of("server_id", "101"));
-CompletableFuture<String> copper = FunTimeEventsAPI.fetchCopperDungeon();
-CompletableFuture<String> warden = FunTimeEventsAPI.fetchWardenCity();
-
-// Типизированные ответы:
-CompletableFuture<PlayersListResponse> players = FunTimeEventsAPI.fetchPlayers(Map.of("player_name", "Steve"));
-CompletableFuture<BansListResponse> bans       = FunTimeEventsAPI.fetchBans(Map.of("server_id", "101", "limit", "10"));
-```
-
-### Кешированные данные (WSS relay / SSE)
-
-```java
-// Обновляются автоматически. Возвращают пустой список, если данных нет или они устарели >5 сек.
-List<EventResponse>       events     = FunTimeEventsAPI.getEvents();     // системные ивенты
-List<EventResponse>       userEvents = FunTimeEventsAPI.getUserEvents(); // user-ивенты (аирдропы, алтари, маяки)
-List<MineResponse>        mines      = FunTimeEventsAPI.getMines();
-List<LootAreaResponse>    copper     = FunTimeEventsAPI.getCopperDungeons();
-List<LootAreaResponse>    warden     = FunTimeEventsAPI.getWardenCities();
-SystemInfo                info       = FunTimeEventsAPI.getSystemInfo(); // null в REST-режиме
-```
-
-### Captcha (всегда REST, `POST /captcha`)
-
-```java
-// Решить капчу — вернёт текст и confidence
-FunTimeEventsAPI.solveCaptcha("base64-encoded-png")
-    .thenAccept(response -> {
-        if (response != null && response.solved()) {
-            System.out.println("Solved: " + response.text());
-            System.out.println("Confidence: " + response.overallPercent() + "%");
-        }
-    });
-```
-
----
-
-## Модели (DTO)
-
-### Payloads (POST-запросы, final поля + конструктор)
-
-| Класс | Поля | Использование |
-|-------|------|-------------|
-| `TabPlayersPayload` | `serverId`, `serverType`, `playersList: List<ObservedPlayer>` | TabTracker |
-| `BanPayload` | `serverId`, `serverType`, `playerName`, `reason`, `end` | BanTracker |
-| `DungeonPayload` | `serverId`, `serverType`, `chests: List<ChestInfo>`, `players: List<PlayerGearInfo>` | DungeonTracker |
-| `HellMapPayload` | `serverId`, `serverType`, `mobsCount` | HellMapTracker |
-| `MinePlayersAroundPayload` | `serverId`, `serverType`, `playersAround: List<ObservedPlayer>` | MineTracker |
-| `EventCoordinatesPayload` | `serverId`, `serverType`, `event`, `level`, `coordinates: EventCoordinates` | EventCoordinatesTracker |
-
-### Вложенные payload-модели
-
-| Класс | Поля | Назначение |
-|-------|------|-----------|
-| `ObservedPlayer` | `playerName`, `donate`, `seenAt` | Игрок в TAB / у авто-шахты |
-| `ChestInfo` | `x`, `y`, `z`, `timeLeft` | Сундук в данже (от клиента) |
-| `PlayerGearInfo` | `playerName`, `donate`, `helmet`, `chestplate`, `leggings`, `boots`, `isInvisible` | Экипировка игрока в данже |
-| `EventCoordinates` | `x`, `y`, `z` (Integer, nullable) | Координаты ивента |
-
-### Responses (GET/SSE/snapshot, mutable поля, нет конструктора)
-
-| Класс | Поля | Назначение |
-|-------|------|-----------|
-| `EventResponse` | `serverId`, `serverType`, `name`, `status`, `timeLeft`, `level`, `levelUpdatedAt`, `coordinates: EventCoordinates`, `message`, `eventInfo: EventInfoResponse`, `updatedAt` | Активный ивент |
-| `EventInfoResponse` | `mobsCount: Integer` | Детали ивента |
-| `MineResponse` | `serverId`, `serverType`, `rarity`, `timeLeft`, `mineInfo: MineInfoResponse`, `updatedAt` | Активная шахта |
-| `MineInfoResponse` | `playersAround: List<ObservedPlayer>`, `updatedAt` | Игроки вокруг шахты |
-| `LootAreaResponse` | `serverId`, `serverType`, `chests: List<ChestResponse>`, `players: List<PlayerGearInfo>` | Данж (Copper / Warden) |
-| `ChestResponse` | `x`, `y`, `z`, `timeLeft`, `createdAt` | Сундук из бэкенда |
-| `BanResponse` | `serverId`, `serverType`, `playerName`, `reason`, `end`, `bannedAt` | Бан-рекорд |
-| `BansListResponse` | `data: List<BanResponse>` | Список банов |
-| `PlayersListResponse` | `data: List<PlayerDataResponse>` | Список игроков |
-| `PlayerDataResponse` | `playerName`, `donate`, `active`, `serverId`, `serverType`, `serverHistory: List<ServerHistoryEntry>` | Метаданные игрока |
-| `ServerHistoryEntry` | `serverId`, `serverType`, `firstSeen`, `lastSeen` | История посещений |
-| `Snapshot` | `type`, `events: List<EventResponse>`, `mines: List<MineResponse>`, `copperDungeons: List<LootAreaResponse>`, `wardenCities: List<LootAreaResponse>`, `systemInfo: SystemInfo`, `ts: double` | Relay-снапшот |
-| `SystemInfo` | `events`, `mines`, `copperDungeons`, `wardenCities`, `clientsConnected`, `trackedAnarchies` (int) | Статистика бэкенда |
-| `CaptchaResponse` | `solved: boolean`, `text: String`, `overallPercent: Double`, `results: List<PercentResult>` | Результат капчи |
-| `PercentResult` | `number: String`, `confidencePercent: double` | Результат одной цифры |
-
----
-
-## Endpoints
-
-### POST (от трекеров)
-
-| Endpoint | Payload | Трекер |
-|----------|---------|--------|
-| `POST /players` | `TabPlayersPayload` | TabTracker |
-| `POST /bans` | `BanPayload` | BanTracker |
-| `POST /copper-dungeon` | `DungeonPayload` | DungeonTracker |
-| `POST /warden-city` | `DungeonPayload` | DungeonTracker |
-| `POST /events/hell-map` | `HellMapPayload` | HellMapTracker |
-| `POST /mines/players-around` | `MinePlayersAroundPayload` | MineTracker |
-| `POST /events/coordinates` | `EventCoordinatesPayload` | EventCoordinatesTracker |
-
-### GET (через SDK)
-
-| Endpoint | Метод SDK | Параметры |
-|----------|-----------|-----------|
-| `GET /events` | `fetchEvents(params)` | `server_id`, `server_type`, `name`, `level` |
-| `GET /mines` | `fetchMines(params)` | `server_id`, `server_type`, `rarity`, `time_before` |
-| `GET /players` | `fetchPlayers(params)` | `player_name`, `search`, `server_id`, `server_type`, `donate`, `active_after`, `limit` |
-| `GET /bans` | `fetchBans(params)` | `player_name`, `server_id`, `server_type`, `reason`, `limit`, `banned_after` |
-| `GET /copper-dungeon` | `fetchCopperDungeon()` | — |
-| `GET /warden-city` | `fetchWardenCity()` | — |
-
-### SSE-стримы (только в REST-режиме)
-
-| Endpoint | Кеш-класс | Ключ |
-|----------|-----------|------|
-| `GET /events/stream` | `SseCache<EventResponse>` | `name` |
-| `GET /mines/stream` | `SseCache<MineResponse>` | `serverId_rarity` |
-| `GET /copper-dungeon/stream` | `SseCache<LootAreaResponse>` | `serverId` |
-| `GET /warden-city/stream` | `SseCache<LootAreaResponse>` | `serverId` |
-
----
-
-## Трекеры — что и как отслеживают
-
-### 1. BanTracker (`tracker/ban/BanTracker.java`)
-
-Парсит сообщения чата на предмет бана — извлекает имя игрока, причину, длительность и сервер через hover-текст (`HoverEventUtil.extractHoverText()`).
-
-### 2. TabTracker (`tracker/tab/TabTracker.java`)
-
-Сканирует `playerList` из `ClientPlayNetworkHandler`, собирает имена и донат-префиксы через `PlayerNameUtil`.
-
-**Не реализует `PayloadSender`** — данные собирает `TabTracker`, а отправляет их `TrackerManager.sendTabPlayersPayload()`.
-
-### 3. DungeonTracker (`tracker/dungeon/DungeonTracker.java`)
-
-Сканирует Медный данж и Город Вардена. Оптимизация: сканирует только когда игрок ВНУТРИ зоны данжа (проверяет позицию). Собирает:
-- Сундуки (координаты + время до закрытия) — через `TextDisplayUtil.getDisplayText()`
-- Игроков (имя, донат, экипировка, инвиз)
-
-**Оптимизация:** donate-кеш в `scanPlayers()` (synchronized LinkedHashMap, 30s TTL) — `PlayerNameUtil.extractDonate()` вызывается только при промахе кеша.
-
-### 4. HellMapTracker (`tracker/hell/HellMapTracker.java`)
-
-Читает боссбар через `BossBarUtil.getBossBars()` и `BossBarUtil.getBossBarName()` — рефлексия `bossBars` поля + `getName()` в отдельной утилите.
-
-### 5. MineTracker (`tracker/mine/MineTracker.java`)
-
-На каждом тике ищет игроков вокруг авто-шахты на спавне (по координатам). Собирает имена и донат-префиксы.
-
-### 6. EventCoordinatesTracker (`tracker/eventcoordinates/EventCoordinatesTracker.java`)
-
-Парсит игровые сообщения чата через регулярные выражения:
-- `||| [название_ивента] |||` — название ивента
-- `Уровень лута: ...` — уровень
-- `Появился на координатах [x y z]` — координаты
-
-Отправка только при наличии координат в сообщении. Анонсы без координат (например, `Появился на Арене Смерти (/darena)`), а также отсутствие уровня, имени ивента или server_id — пропускаются (debug-лог).
-
-### 7. ServerContext (`tracker/server/ServerContext.java`)
-
-**Синглтон.** Определяет текущий сервер:
-- IP сервера — FunTime? (`*.funtime.su`, `.sh`, `.me`, `.store`, `.network`, `.wiki`)
-- ID сервера — из сайдбара (`Анархия-101` → `101`)
-
-Все трекеры вызывают `ServerContext.getInstance()` для проверки `isOnFuntime()`, `getServerId()`, `getServerType()`.
-
----
-
-## Logging
-
-### Модульные теги
-
-```java
-FteLogger.info(FteLogger.RELAY, "connected");    // [FTE:RELAY] connected
-FteLogger.warn(FteLogger.API, "HTTP 400");        // [FTE:API] HTTP 400
-FteLogger.debug(FteLogger.TRACK, "5 players");    // [FTE:TRACK] 5 players
-```
-
-| Тег | Модуль |
-|-----|--------|
-| `CORE` | Жизненный цикл SDK, bootstrap, scheduler |
-| `RELAY` | WebSocket connect/auth/watchdog/disconnect/flush |
-| `API` | HTTP запросы/ответы/gzip |
-| `CACHE` | SSE-стримы, парсинг снапшотов |
-| `TRACK` | Все 7 трекеров (start/stop/data/ошибки) |
-
----
-
-## Компрессия (gzip)
-
-- Gzip применяется ТОЛЬКО к HTTP (ApiClient): заголовок `Content-Encoding: gzip` + `GZIPOutputStream`.
-- WebSocket (RelayClient) НЕ использует gzip.
-- `.disableCompression()` отключает gzip для HTTP.
-
----
-
-## Offline-режим
-
-```java
-FunTimeEventsAPI.builder()
-    .userAgent("MyMod/1.0")
-    .offlineMode()
-    .build();
-```
-
-- HTTP-клиент не создаётся
-- GET-запросы возвращают `null`
-- POST не отправляется
-- Трекеры работают и собирают данные локально
-
----
-
-## Cross-version compatibility (1.21.x)
-
-SDK использует **утилиты рефлексии** для API Minecraft, которые отличаются в разных версиях Yarn-маппингов (все 5 точек сведены в `util/`):
-
-1. **`HoverEventUtil`** — `getAction()` / `getValue()` / `value()` fallback
-2. **`TextDisplayUtil`** — определение TextDisplay через `Class.isInstance` + кеш
-3. **`BossBarUtil`** — `BossBarHud.bossBars` поле + `getName()`
-4. **`PlayerNameUtil`** — `GameProfile.getName()` / `name()` fallback
-5. **`PlayerNameUtil`** — `GameProfile.getId()` / `id()` fallback
-
-Стабильные импорты (безопасны во всех версиях):
-- `MinecraftClient`, `PlayerEntity`, `Blocks`, `Text`, `EquipmentSlot`
-- `ClientReceiveMessageEvents`, `ClientTickEvents`, `ClientPlayConnectionEvents` (Fabric API)
-- `Registries`, `ItemStack`, `BlockPos`, `Entity`
-
----
-
-## Утилиты
-
-### GsonHolder
-
-```java
-GsonHolder.INSTANCE  // Единый Gson для всего SDK
-```
-
-### TextUtil
-
-```java
-TextUtil.tryGetRawText(Text text);
-// Быстрый доступ к plain-text без Text.visit() — null для не-plain контента
-```
-
-### HoverEventUtil
-
-```java
-HoverEventUtil.extractHoverText(Text message);
-// Извлекает hover-текст из сообщения (рекурсивный поиск по siblings)
-```
-
-### TextDisplayUtil
-
-```java
-TextDisplayUtil.isTextDisplay(Entity entity);
-TextDisplayUtil.getDisplayText(Entity entity);
-// Определяет TextDisplay entity и получает текст через рефлексию getText()
-// Fast-path: Class.isInstance() после первого разрешения класса
-```
-
-### BossBarUtil
-
-```java
-BossBarUtil.getBossBars();     // Map<?, ?> или null
-BossBarUtil.getBossBarName(Object bar);  // Text или null
-```
-
-### PlayerNameUtil
-
-```java
-PlayerNameUtil.extractDonate(PlayerEntity player);
-PlayerNameUtil.extractDonate(PlayerListEntry entry);
-// Возвращает донат-префикс (всё до имени в display name)
-// Имеет статический DONATE_CACHE с TTL 30с (ConcurrentHashMap)
-
-PlayerNameUtil.getProfileName(Object profile);   // getName() / name() fallback
-PlayerNameUtil.getProfileId(Object profile);     // getId() / id() fallback
-```
-
-### ServerDetector
-
-```java
-ServerDetector.isFuntime(serverIp);    // *.funtime.su / .sh / .me / .store / .network / .wiki
-ServerDetector.extractServerId(text);   // "Анархия-101" → 101
-ServerDetector.getCurrentServerIp();    // Текущий IP сервера
-ServerDetector.getSidebarTitle();       // Текст сайдбара
-```
-
----
-
-## Известные особенности
-
-1. **Кодировка:** Windows-консоль должна быть в UTF-8: `chcp 65001`
-2. **Loom-кеш:** После любого изменения SDK — удалять `.gradle\loom-cache\remapped_mods\remapped\net\funtimeevents\` в проекте
-3. **Gradle daemon:** При проблемах — `.\gradlew --stop` перед очисткой кеша
-4. **fabric.mod.json:** НЕ объявляет `fabric-loader` и `fabric-api` — они предоставляются consumer-модом
-5. **Версия SDK:** `FunTimeEventsAPI.getVersion()` — читает из `fabric.mod.json` в рантайме
+Для 26.3 поменяйте только minecraft_version и используйте соответствующий staging
+target. Зависимость по умолчанию указывает на JitPack, применяйте её после публикации.
+Точный ExampleClient.java приведён в README; ключ приходит из consumer-конфигурации.
+
+## Builder и режимы
+
+`userAgent(...)` обязателен. `apiKey(...)` обязателен в online режиме.
+`baseUrl(...)` по умолчанию https://api.funtimeevents.su/v1/.
+`logLevel(FteConfig.LogLevel.DEBUG)` меняет уровень модульного логирования.
+Полная конфигурация сравнивается при повторном Builder: URL, ключ, userAgent,
+режим, compression, флаги трекеров, интервал, logLevel. Несовпадение вызывает
+IllegalStateException без раскрытия ключа. Чужой API-ключ незаметно не используется.
+
+| Режим | Отправка трекеров | Получение/кеши | Captcha |
+|---|---|---|---|
+| По умолчанию | WSS relay, plain TEXT JSON | REST GET + WebSocket snapshots | REST |
+| disableWebSocket() | REST POST | REST GET + SSE | REST |
+| offlineMode() | без отправки | пустые caches, completed-null futures | без запроса |
+
+`disableCompression()` отключает gzip HTTP POST. WSS всегда использует текстовый
+JSON. Auth envelope, endpoint paths, JSON и прежние типы DTO не менялись при переносе.
+Offline не является локальным хранилищем данных: payload отбрасывает no-op sender.
+
+### Трекеры и интервалы
+
+Все включены по умолчанию. Отключение: disableScanTabPlayers(), disableBansTracker(),
+disableScanDungeon(), disableScanHellMap(), disableScanMine(),
+disableEventCoordinatesTracker(). Dungeon включает Copper Dungeon и Warden City.
+`tickIntervalSeconds(...)`: общий период 10 секунд по умолчанию, минимум 1 секунда.
+Сохраняются прежние дополнительные интервалы HellMap и алгоритмы каждого трекера.
+SDK реагирует на JOIN/DISCONNECT и сообщения; consumer не регистрирует свои callbacks.
+
+### Публичные методы
+
+Typed caches: getEvents(), getUserEvents(), getMines(), getCopperDungeons(),
+getWardenCities(); getSystemInfo() доступен в WSS режиме.
+Async GET: fetchEvents(params), fetchUserEvents(params), fetchMines(params),
+fetchPlayers(params), fetchBans(params), fetchCopperDungeon(), fetchWardenCity().
+Captcha: solveCaptcha(base64), всегда REST, даже при WSS.
+Не блокируйте клиентский поток вызовом join/get на сетевых futures. Результат
+обработайте асинхронно; изменение Minecraft UI верните на клиентский поток.
+
+## Lifetime и shutdown
+
+Игровая сессия и SDK runtime имеют разные сроки жизни. DISCONNECT останавливает
+трекеры, очищает игровой context/donate caches и делает queued payload старой
+сессии недействительными. Backend caches принадлежат runtime. Reconnect не создаёт
+новые Fabric подписки. Не вызывайте shutdown при DISCONNECT.
+
+Legacy shutdown() останавливает глобальный runtime. В текущем кандидате один
+consumer может остановить SDK другого: это явный продуктовый риск, решение
+lease/owner изложено в RELEASE_DECISIONS.md. До принятия решения централизуйте
+владение runtime в одном host-моде. CLIENT_STOPPING очищает runtime автоматически.
+Build/shutdown выполняются на клиентском потоке. Инициализация с ошибкой очищает
+созданные ресурсы, сохраняя ранее установленный чужой runtime.
+
+## Гарантии доставки
+
+Snapshots: TAB, игроки шахт, состояние данжей, HellMap. Очередь до 64 ключей
+type/server, latest wins, TTL 15 секунд; старое состояние заменяется новым.
+Важные события: bans и coordinates, FIFO до 256, TTL 30 секунд, overflow отклоняет
+новое событие. При shutdown очередь очищается; смена сессии инвалидирует payload.
+Перед отправкой JSON/gzip выполняются вне client thread. Gzip failure отменяет
+HTTP запрос: plain bytes не отправляются с Content-Encoding: gzip.
+
+Это best effort. Нет durable spool, backend ACK, гарантии at-least-once или
+exactly-once. HTTP/WS неоднозначный исход не повторяется слепо. При reconnect бан
+может потеряться; приложению нельзя считать очередь журналом банов. Усиление
+доставки требует отдельного решения по ACK/idempotency/retention backend.
+
+## Несколько модов и Loader
+
+Одинаковый `fte-api` одной версии в двух jar-in-jar должен разрешаться в один мод.
+Используйте совместимые явные version constraints. Exact-конфликт SDK версий
+должен завершаться диагностикой Loader. При диапазонах Loader может выбрать одну
+совместимую версию; это не означает, что два runtime будут изолированы. Разные MC
+targets никогда не должны загружаться в один клиент. Детали фактических негативных
+проверок и бинарной совместимости находятся в PHASE6_RESULTS.md.
+
+## Миграция с прежнего SDK
+
+Старые tags и `com.github.Rizzener.FunTimeEventsSDK:fte-api:<old-version>` сохраняют
+прежний смысл и не перепубликуются. Для нового релиза замените artifactId на
+`mc<точная-версия>`, одновременно обновите include и metadata зависимости на
+`fte-api`. Не используйте Maven relocation с fte-api на произвольный MC target:
+Maven не выбирает target из вашей версии Minecraft. Не используйте агрегат repo,
+который притянет несколько несовместимых targets.
+
+Builder, пакеты facade/config/models и сетевые публичные дескрипторы проверяются
+по старому JAR. Внутренние tracker/bootstrap constructors не являются обещанием
+бинарной совместимости. Precompiled legacy probe запускается на новом SDK;
+это не подтверждает совместимость всех неизвестных consumer-модов.
+
+## Разработка и публикация
+
+AGENTS.md содержит команды. Root Gradle — единственная producer сборка. Python
+контролирует production процессы и доказательства; обычная сборка/IDE используют
+Gradle напрямую. Public channel остаётся JitPack. RC не опубликован. Изолированное
+Maven staging и GitHub artifact uploads не являются Maven release deployment.
+Порядок публикации и сравнение каналов — RELEASE_DECISIONS.md.
+
+Лицензия — MIT License with Backend Restriction; сохранить точный LICENSE.
+Известная native проблема Windows 26.3 остаётся OPEN независимо от Linux PASS.

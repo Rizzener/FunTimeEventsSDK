@@ -1,0 +1,127 @@
+def mc = project.ext.targetMinecraft
+def matrix = new groovy.json.JsonSlurper().parse(file('../../targets.json'))
+def spec = matrix.targets.find { it.minecraft == mc }
+def language = spec.java as int
+def api = spec.fabric_api
+def legacy = language == 21
+group = 'net.funtimeevents.verification.consumer'
+version = findProperty('mod_version') ?: matrix.sdk_version
+repositories {
+    if(findProperty('staging_repository'))maven { url=uri(findProperty('staging_repository'));content { includeGroup 'com.github.Rizzener.FunTimeEventsSDK' } }
+    if(!findProperty('staging_repository'))mavenLocal {
+        content { includeGroup 'com.github.Rizzener.FunTimeEventsSDK' }
+    }
+    maven { url = 'https://maven.fabricmc.net/' }
+    mavenCentral()
+}
+java { toolchain.languageVersion = JavaLanguageVersion.of(language) }
+tasks.withType(JavaCompile).configureEach {
+    options.release = language
+    options.encoding = 'UTF-8'
+}
+dependencies {
+    compileOnly files(file('../../fixtures/binary-compat/classes'))
+    minecraft "com.mojang:minecraft:${mc}"
+    if (legacy) mappings loom.officialMojangMappings()
+    def sdk = "com.github.Rizzener.FunTimeEventsSDK:mc${mc}:${project.version}"
+    if (legacy) {
+        modImplementation "net.fabricmc:fabric-loader:${matrix.loader}"
+        modImplementation "net.fabricmc.fabric-api:fabric-api:${api}"
+        modImplementation sdk
+    } else {
+        implementation "net.fabricmc:fabric-loader:${matrix.loader}"
+        implementation "net.fabricmc.fabric-api:fabric-api:${api}"
+        implementation sdk
+    }
+    include sdk
+    productionRuntimeMods "net.fabricmc.fabric-api:fabric-api:${api}"
+}
+sourceSets.main.java.srcDir(file('../common/src/main/java'))
+// Compile the exact documented example against each Maven target.
+sourceSets.main.java.srcDir(file('../../examples/consumer/src/main/java'))
+sourceSets.main.resources.srcDir(file('../../fixtures/data'))
+sourceSets.main.resources.srcDir(file('../../fixtures/binary-compat/classes'))
+
+tasks.named('jar') { exclude 'net/funtimeevents/verification/consumer/PeerConsumer.class' }
+def peerMetadata=layout.buildDirectory.file('peer-resources/fabric.mod.json')
+def peerSdkVersion=findProperty('peer_sdk_version')?:project.version.toString()
+def writePeer=tasks.register('writePeerMetadata') {
+    inputs.property('version',project.version)
+    inputs.property('peerSdkVersion',peerSdkVersion)
+    outputs.file(peerMetadata)
+    doLast {
+        def f=peerMetadata.get().asFile;f.parentFile.mkdirs()
+        f.text=groovy.json.JsonOutput.toJson([schemaVersion:1,id:'phase4-peer-'+mc.replace('.',''),
+            version:project.version.toString(),environment:'client',entrypoints:[client:['net.funtimeevents.verification.consumer.PeerConsumer']],
+            depends:[minecraft:'='+mc,'fte-api':'='+peerSdkVersion],
+            jars:[[file:"META-INF/jars/mc${mc}-${peerSdkVersion}.jar"]]])
+    }
+}
+def peerJar=tasks.register('peerJar',Jar) {
+    dependsOn tasks.named('classes'),writePeer
+    archiveClassifier='peer'
+    from(sourceSets.main.output) { include 'net/funtimeevents/verification/consumer/PeerConsumer.class' }
+    from(peerMetadata)
+    from(configurations.detachedConfiguration(dependencies.create("com.github.Rizzener.FunTimeEventsSDK:mc${mc}:${peerSdkVersion}"))) { into 'META-INF/jars' }
+}
+def productionPeer=peerJar
+if(legacy)productionPeer=tasks.named('remapPeerJar') {
+    dependsOn peerJar
+    inputFile=peerJar.flatMap { it.archiveFile }
+    archiveClassifier='peer-production'
+    addNestedDependencies=false
+}
+tasks.named('prodClient') {
+    if(providers.gradleProperty('phase4stage').isPresent())mods.from(productionPeer)
+}
+tasks.named('processResources') {
+    inputs.properties(version: project.version, minecraft: mc, java: language)
+    from(file('../common/src/main/resources')) {
+        expand(version: project.version, minecraft: mc, java: language,
+               consumerId: 'poc-consumer-'+mc.replace('.',''))
+    }
+}
+tasks.named('prodClient') {
+    if(providers.gradleProperty('phase4stage').isPresent())jvmArgs.add("-Dfte.phase4.stage=${findProperty('phase4stage')}")
+    if(providers.gradleProperty('phase5cpu').isPresent())jvmArgs.add('-Dfte.phase5.threadCpu=true')
+    if(providers.gradleProperty('phase4ApiOnly').isPresent())jvmArgs.add('-Dfte.phase4.apiOnly=true')
+    if(providers.gradleProperty('phase4flags').isPresent())jvmArgs.add('-Dfte.phase4.flags=true')
+    if(providers.gradleProperty('phase4headlessFailure').isPresent())jvmArgs.addAll('-Djava.awt.headless=true','-Dfte.phase4.versionConflict=true')
+    if(providers.gradleProperty('phase4backend').isPresent())jvmArgs.add("-Dfte.phase4.backend=${findProperty('phase4backend')}")
+    if(providers.gradleProperty('phase4backend').isPresent()) {
+        jvmArgs.addAll("-Djavax.net.ssl.trustStore=${file('../../.evidence/phase4-tls/trust-full.p12').absolutePath}",
+            '-Djavax.net.ssl.trustStorePassword=phase4-test')
+    }
+    if(providers.gradleProperty('phase4mode').isPresent())jvmArgs.add("-Dfte.phase4.mode=${findProperty('phase4mode')}")
+    if (providers.gradleProperty('nativeBaseline').isPresent()) {
+        // Diagnostic control: official Fabric API only; no consumer or nested SDK.
+        mods.setFrom(configurations.productionRuntimeMods)
+        jvmArgs.add('-Dfte.native.baseline=true')
+    }
+    if (providers.gradleProperty('diagnosticVendor').orNull == 'AZUL') {
+        javaLauncher = javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(language)
+            vendor = JvmVendorSpec.AZUL
+        }
+    }
+    if (providers.gradleProperty('nativeDiagnostic').isPresent()) {
+        jvmArgs.addAll('-Dfte.native.diagnostic=true', '-XX:ErrorFile=hs_err_pid%p.log')
+    }
+    if (providers.gradleProperty('phase3').isPresent()) {
+        jvmArgs.addAll('-Dfte.phase3=true', '-Dfte.diagnostics.metrics=true', "-Dfte.phase3.port=${findProperty('phase5_port') ?: (legacy ? 28414 : 28633)}", "-Dfte.phase3.minecraft=${mc}")
+    }
+    if (providers.gradleProperty('phase2').isPresent()) {
+        jvmArgs.addAll('-Dfte.phase2=true', "-Dfte.phase2.port=${legacy ? 27414 : 27633}", "-Dfte.phase2.minecraft=${mc}")
+    }
+}
+tasks.named('prodClient') {
+    useXVFB = false
+    outputs.upToDateWhen { false }
+    runDir = layout.buildDirectory.dir(providers.gradleProperty('nativeBaseline').isPresent() ? 'native-baseline' :
+        (providers.gradleProperty('nativeDiagnostic').isPresent() ? 'native-diagnostic' :
+        (providers.gradleProperty('phase3').isPresent() ? 'phase3-client' :
+        (providers.gradleProperty('phase2').isPresent() ? 'phase2-client' : 'production-run'))))
+    jvmArgs.addAll('-Xmx1G', '-Dfile.encoding=UTF-8')
+    programArgs.addAll('--username', 'PocVerifier', '--version', mc,
+        '--accessToken', '0', '--userType', 'legacy', '--width', '640', '--height', '480')
+}

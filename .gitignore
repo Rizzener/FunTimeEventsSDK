@@ -10,3 +10,13 @@ META-INF/
 *.zip
 tests/
 scripts/
+
+# Candidate evidence is retained locally; CI uploads it as immutable run artifacts.
+/.evidence/
+/results/
+__pycache__/
+**/logs/
+*.dmp
+*.p12
+*.key
+/.jitpack-jdks/

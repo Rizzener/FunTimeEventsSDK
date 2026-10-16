@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "fte-api",
+  "version": "${version}",
+  "name": "FunTimeEventsSDK",
+  "environment": "client",
+  "license": "LicenseRef-FunTimeEvents-Backend-Restriction",
+  "mixins": ["fte-trackers.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "=${minecraft}",
+    "java": ">=${java}",
+    "fabric-api": "*"
+  }
+}

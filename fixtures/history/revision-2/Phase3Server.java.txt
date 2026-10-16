@@ -1,0 +1,180 @@
+package net.funtimeevents.poc.fixture;
+
+import com.google.gson.*;
+import com.mojang.authlib.GameProfile;
+import com.mojang.datafixers.util.Pair;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.funtimeevents.poc.fixture.mixin.*;
+import net.minecraft.commands.Commands;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.*;
+import net.minecraft.network.protocol.game.*;
+import net.minecraft.server.level.*;
+import net.minecraft.world.BossEvent;
+import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.item.*;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.scores.DisplaySlot;
+import net.minecraft.world.scores.criteria.ObjectiveCriteria;
+
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.util.*;
+
+/** Server-generated vanilla world/TAB/entity/equipment/boss/chat packets over TCP. */
+public final class Phase3Server {
+    private final JsonArray sessions = JsonParser.parseReader(new InputStreamReader(Objects.requireNonNull(
+        getClass().getResourceAsStream("/phase3/tracker-sessions.json")), StandardCharsets.UTF_8)).getAsJsonArray();
+    private Run run;
+    private int joins;
+    private final List<Entity> entities = new ArrayList<>();
+    private static final class Run {
+        final ServerPlayer player;
+        final JsonObject fixture;
+        final int session;
+        ServerLevel world;
+        ServerBossEvent validBar, invalidBar;
+        int ticks, kickAt = -1;
+        boolean ready;
+        Run(ServerPlayer player, JsonObject fixture, int session) { this.player=player; this.fixture=fixture; this.session=session; }
+    }
+
+    public void onInitialize() {
+        CommandRegistrationCallback.EVENT.register((dispatcher, registry, environment) -> {
+            var root = Commands.literal("phase3");
+            for (String action : List.of("next", "boss9", "remove")) root.then(Commands.literal(action).executes(ctx -> {
+                if (run == null || !run.ready || ctx.getSource().getPlayer() != run.player) return 0;
+                if (action.equals("boss9") && run.validBar != null)
+                    run.validBar.setName(Component.literal("[fixture] Адская резня - Осталось мобов: 9 !"));
+                if (action.equals("remove") && run.validBar != null) run.validBar.removeAllPlayers();
+                if (action.equals("next") && run.kickAt < 0) {
+                    run.player.sendSystemMessage(Component.literal("PHASE3_END " + run.session));
+                    run.kickAt = run.ticks + 2;
+                }
+                System.out.println("[PHASE3-SERVER] COMMAND session="+run.session+" action="+action);
+                return 1;
+            }));
+            dispatcher.register(root);
+        });
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            entities.forEach(Entity::discard); entities.clear();
+            if (++joins > sessions.size()) throw new IllegalStateException("Extra fixture connection");
+            run = new Run(handler.player, sessions.get(joins-1).getAsJsonObject(), joins);
+            var board = server.getScoreboard();
+            board.setDisplayObjective(DisplaySlot.SIDEBAR, null);
+            for (var objective : List.copyOf(board.getObjectives())) board.removeObjective(objective);
+            int id = run.fixture.get("server_id").getAsInt();
+            if (id >= 0) board.setDisplayObjective(DisplaySlot.SIDEBAR, board.addObjective("phase3_"+joins,
+                ObjectiveCriteria.DUMMY,Component.literal("Анархия-"+id),ObjectiveCriteria.RenderType.INTEGER,false,null));
+            String dimension = run.fixture.get("dimension").getAsString();
+            for (var world : server.getAllLevels()) if (FixtureVersion.dimension(world).equals(dimension)) run.world = world;
+            if (run.world == null) throw new IllegalStateException("Fixture dimension missing: "+dimension);
+            var p = run.fixture.getAsJsonArray("pos");
+            handler.player.setGameMode(GameType.CREATIVE);
+            handler.player.getAbilities().flying = true;
+            handler.player.onUpdateAbilities();
+            handler.player.teleportTo(run.world,p.get(0).getAsDouble()+0.25,p.get(1).getAsDouble(),p.get(2).getAsDouble()+0.25,Set.of(),0,0,true);
+            System.out.println("[PHASE3-SERVER] JOIN session="+joins+" fixture="+run.fixture.get("name").getAsString()+" dimension="+dimension);
+        });
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> server.execute(() -> {
+            if (run != null && run.player == handler.player) {
+                if (run.validBar != null) run.validBar.removeAllPlayers();
+                if (run.invalidBar != null) run.invalidBar.removeAllPlayers();
+                run = null;
+            }
+        }));
+        ServerTickEvents.END_SERVER_TICK.register(server -> {
+            if (Files.exists(Path.of("phase3.stop"))) { server.halt(false); return; }
+            if (run == null) return;
+            run.ticks++;
+            int setupTick = run.fixture.get("wait_ticks").getAsInt() < 10 ? 1 : 20;
+            if (run.ticks == setupTick) setup(run);
+            if (run.kickAt == run.ticks) run.player.connection.disconnect(Component.literal("Phase3 session complete"));
+        });
+    }
+
+    private void setup(Run r) {
+        for (var item : r.fixture.getAsJsonArray("chests")) {
+            var chest=item.getAsJsonObject(); var p=chest.getAsJsonArray("pos");
+            var pos=new BlockPos(p.get(0).getAsInt(),p.get(1).getAsInt(),p.get(2).getAsInt());
+            var block=switch(chest.get("type").getAsString()) {
+                case "barrel" -> Blocks.BARREL; case "trapped_chest" -> Blocks.TRAPPED_CHEST; default -> Blocks.CHEST;
+            };
+            r.world.setBlockAndUpdate(pos,block.defaultBlockState());
+            textDisplay(r,pos.getX(),-50,pos.getZ(),chest.get("timer").getAsString());
+            if (chest.get("timer").getAsString().equals("01:23")) textDisplay(r,pos.getX(),-50,pos.getZ(),"01:23");
+        }
+        var local=r.fixture.getAsJsonArray("pos");
+        int x=local.get(0).getAsInt(),y=local.get(1).getAsInt(),z=local.get(2).getAsInt();
+        for (int i=0;i<r.fixture.get("decoys").getAsInt();i++) {
+            var e=FixtureVersion.decoy(r.world);
+            // Keep the load in view without physically pushing the local player
+            // across the tested zone boundary (revision 1 overlapped the player).
+            e.setPos(x-8+(i%8)*0.1,y,z+8+(i/8)*0.1);e.setNoGravity(true);e.setInvisible(true);
+            r.world.addFreshEntity(e);entities.add(e);
+        }
+        if (r.fixture.has("extra_text_displays")) for(int i=0;i<r.fixture.get("extra_text_displays").getAsInt();i++)
+            textDisplay(r,x,y+1,z,"Not a timer "+i);
+        List<ClientboundPlayerInfoUpdatePacket.Entry> entries=new ArrayList<>();
+        for (var value:r.fixture.getAsJsonArray("npcs")) {
+            var n=value.getAsJsonObject();var uuid=UUID.fromString(n.get("uuid").getAsString());
+            entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(uuid,new GameProfile(uuid,n.get("name").getAsString()),
+                true,1,GameType.SURVIVAL,Component.literal(n.get("donate").getAsString()+" "+n.get("name").getAsString()),true,0,null));
+        }
+        var tab=new ClientboundPlayerInfoUpdatePacket(EnumSet.of(
+            ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER,ClientboundPlayerInfoUpdatePacket.Action.UPDATE_GAME_MODE,
+            ClientboundPlayerInfoUpdatePacket.Action.UPDATE_LISTED,ClientboundPlayerInfoUpdatePacket.Action.UPDATE_LATENCY,
+            ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME),List.<ServerPlayer>of());
+        ((PlayerInfoPacketWriter)tab).fte$setEntries(entries);r.player.connection.send(tab);
+        for (var value:r.fixture.getAsJsonArray("npcs")) {
+            var n=value.getAsJsonObject(); if(!n.get("entity").getAsBoolean()) continue;
+            var profile=new GameProfile(UUID.fromString(n.get("uuid").getAsString()),n.get("name").getAsString());
+            var ghost=new ServerPlayer(r.world.getServer(),r.world,profile,ClientInformation.createDefault());
+            var p=n.getAsJsonArray("pos");ghost.setPos(p.get(0).getAsDouble(),p.get(1).getAsDouble(),p.get(2).getAsDouble());
+            ghost.setInvisible(n.get("invisible").getAsBoolean());
+            r.player.connection.send(new ClientboundAddEntityPacket(ghost,0,ghost.blockPosition()));
+            var metadata=ghost.getEntityData().getNonDefaultValues();
+            if(metadata!=null)r.player.connection.send(new ClientboundSetEntityDataPacket(ghost.getId(),metadata));
+            var gear=n.getAsJsonArray("gear");var slots=List.of(EquipmentSlot.HEAD,EquipmentSlot.CHEST,EquipmentSlot.LEGS,EquipmentSlot.FEET);
+            List<Pair<EquipmentSlot,ItemStack>> equipment=new ArrayList<>();
+            for(int i=0;i<4;i++)equipment.add(Pair.of(slots.get(i),switch(gear.get(i).getAsString()) {
+                case "diamond_helmet" -> new ItemStack(Items.DIAMOND_HELMET);
+                case "netherite_chestplate" -> new ItemStack(Items.NETHERITE_CHESTPLATE);
+                case "leather_boots" -> new ItemStack(Items.LEATHER_BOOTS); default -> ItemStack.EMPTY;
+            }));
+            r.player.connection.send(new ClientboundSetEquipmentPacket(ghost.getId(),equipment));
+        }
+        if(r.fixture.has("boss")) {
+            r.invalidBar=FixtureVersion.boss(Component.literal("Ordinary boss 999"),BossEvent.BossBarColor.RED);
+            r.validBar=FixtureVersion.boss(Component.literal("Адская резня - Осталось мобов: 17"),BossEvent.BossBarColor.PURPLE);
+            r.invalidBar.addPlayer(r.player);r.validBar.addPlayer(r.player);
+        }
+        for(var value:r.fixture.getAsJsonArray("messages")) {
+            var m=value.getAsJsonObject();Component component=message(m);
+            if(m.get("channel").getAsString().equals("CHAT")) r.player.connection.send(new ClientboundDisguisedChatPacket(component,
+                ChatType.bind(ChatType.CHAT,r.player.registryAccess(),Component.literal("Fixture"))));
+            else r.player.sendSystemMessage(component);
+            System.out.println("[PHASE3-SERVER] MESSAGE session="+r.session+" id="+m.get("id").getAsString());
+        }
+        r.ready=true;r.player.sendSystemMessage(Component.literal("PHASE3_READY "+r.session));
+        System.out.println("[PHASE3-SERVER] READY session="+r.session+" entities="+entities.size()+" npcs="+entries.size());
+    }
+
+    private void textDisplay(Run r,double x,double y,double z,String text) {
+        var e=FixtureVersion.text(r.world);e.setPos(x,y,z);
+        ((TextDisplayWriter)e).fte$setText(Component.literal(text));r.world.addFreshEntity(e);entities.add(e);
+    }
+    private Component message(JsonObject m) {
+        String text=m.get("text").getAsString();
+        if(!m.has("hover")) return Component.literal(text);
+        Component hover=Component.literal(m.get("hover").getAsString());
+        if(m.get("placement").getAsString().equals("root")) return FixtureHover.attach(Component.literal(text),hover);
+        String suffix="[Подробнее]";
+        return Component.literal(text.substring(0,text.length()-suffix.length())).append(FixtureHover.attach(Component.literal(suffix),hover));
+    }
+}

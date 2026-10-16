@@ -1,92 +1,87 @@
-[![Telegram](https://img.shields.io/badge/Telegram-FunTimeEventsAPI-blue?logo=telegram)](https://t.me/FunTimeEventsAPI)
-[![Telegram](https://img.shields.io/badge/Telegram-FunTimeEventsBot-blue?logo=telegram)](https://t.me/FunTimeEventsBot)
+# FunTimeEventsSDK
 
-# FunTimeEvents SDK
+Клиентский Fabric SDK для FunTimeEvents API: игровые трекеры, REST, WebSocket и SSE.
 
-![Minecraft](https://img.shields.io/badge/Minecraft-1.21.4%20|%201.21.8%20|%201.21.11-green?logo=minecraft)
-![Fabric](https://img.shields.io/badge/Fabric_Loader-0.16+-orange?logo=fabricmc)
-![Java](https://img.shields.io/badge/Java-21+-blue?logo=openjdk)
-![License](https://img.shields.io/badge/License-MIT-white)
+**Ветка release candidate, версия `2.0.0-rc.1`. Публичный выпуск ещё не выполнен.**
+Таблица ниже задаёт целевые артефакты. Фактическая повторная проверка интегрированной
+версии, hosted CI и оставшиеся ограничения фиксируются в [PHASE6_RESULTS.md](PHASE6_RESULTS.md).
+Принятые результаты этапа 5 остаются в [историческом отчёте](poc/multiversion/PHASE5_RESULTS.md).
 
-Библиотека создана для проекта [FunTimeEventsBot](https://t.me/FunTimeEventsBot).
+## Цели
 
-**Клиентская библиотека для Minecraft Fabric** — автоматически отслеживает игровые события на серверах FunTime и отправляет их на бэкенд через WebSocket Relay или HTTP REST.
+| Minecraft | Java | Fabric API | Maven artifact |
+|---|---:|---|---|
+| 1.21.4 | 21 | `0.113.0+1.21.4` | `mc1.21.4` |
+| 1.21.5 | 21 | `0.128.2+1.21.5` | `mc1.21.5` |
+| 1.21.6 | 21 | `0.128.2+1.21.6` | `mc1.21.6` |
+| 1.21.7 | 21 | `0.129.0+1.21.7` | `mc1.21.7` |
+| 1.21.8 | 21 | `0.136.1+1.21.8` | `mc1.21.8` |
+| 1.21.9 | 21 | `0.134.1+1.21.9` | `mc1.21.9` |
+| 1.21.10 | 21 | `0.138.4+1.21.10` | `mc1.21.10` |
+| 1.21.11 | 21 | `0.141.6+1.21.11` | `mc1.21.11` |
+| 26.1 | 25 | `0.145.1+26.1` | `mc26.1` |
+| 26.1.1 | 25 | `0.145.4+26.1.1` | `mc26.1.1` |
+| 26.1.2 | 25 | `0.155.3+26.1.2` | `mc26.1.2` |
+| 26.2 | 25 | `0.161.0+26.2` | `mc26.2` |
+| 26.3 | 25 | `0.163.0+26.3` | `mc26.3` |
 
----
+
+Fabric Loader: **0.19.5** или совместимая более новая версия; проверки фиксируют
+именно 0.19.5. Fabric API устанавливает consumer-мод. Один SDK JAR предназначен
+строго для одной строки таблицы. 26.x требует Java 25; 1.21.x — Java 21.
 
 ## Подключение
 
-### Способ 1: JitPack (рекомендуется)
+Текущий канал — JitPack. Координаты для будущего выпуска:
 
 ```groovy
-repositories {
-    maven { url 'https://jitpack.io' }
-}
-
+repositories { maven { url = 'https://jitpack.io' } }
 dependencies {
-    modImplementation "com.github.Rizzener.FunTimeEventsSDK:fte-api:v1.0.5"
+    modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.4:2.0.0-rc.1"
+    include "com.github.Rizzener.FunTimeEventsSDK:mc1.21.4:2.0.0-rc.1"
 }
 ```
 
-### Способ 2: Локальная сборка (mavenLocal)
+На 26.x с новым Loom используйте `implementation` вместо `modImplementation`.
+`include` физически вкладывает SDK в конечный JAR. Одна только compile/runtime
+dependency не доставляет SDK пользователю. Не используйте агрегат всех targets.
+RC сейчас доступен только в тестовом filesystem staging. Не запрашивайте его в
+JitPack до решения о публикации: запрос отсутствующей версии может запустить сборку.
 
-```bash
-git clone https://github.com/Rizzener/FunTimeEventsSDK.git
-cd FunTimeEventsSDK
-.\gradlew :fte-api:publishToMavenLocal -Pmod_version=1.0.5-SNAPSHOT
-```
+## Инициализация
 
-```groovy
-repositories { mavenLocal() }
-
-dependencies {
-    modImplementation "net.funtimeevents:fte-api:1.0.5-SNAPSHOT"
-}
-```
-
-### 3. Инициализация
+Точный исходник [минимального consumer](examples/consumer/src/main/java/example/ExampleClient.java)
+компилируется вместе с независимыми тестовыми consumer-модами каждого target:
 
 ```java
-FunTimeEventsAPI.builder()
-    .userAgent("MyMod/1.0")
-    .apiKey("sk-fte-...")
-    .build();
+package example;
+
+import net.fabricmc.api.ClientModInitializer;
+import net.funtimeevents.api.FunTimeEventsAPI;
+
+public final class ExampleClient implements ClientModInitializer {
+    @Override public void onInitializeClient() {
+        FunTimeEventsAPI.builder()
+            .userAgent("ExampleMod/1.0")
+            .apiKey(System.getProperty("fte.apiKey"))
+            .build();
+    }
+}
 ```
 
-Трекеры запускаются автоматически при входе в мир.
+Передайте настоящий ключ в `fte.apiKey` либо получите его из собственной конфигурации.
+Не помещайте ключ в исходники или публичные логи. Builder вызывается на клиентском
+потоке. Прежние пакеты `net.funtimeevents.api.*` и типы результатов сохранены.
 
-### Прокси (скрытие IP клиента)
+Подробности: [DOC.md](DOC.md), [команды разработки](AGENTS.md),
+[решения перед выпуском](RELEASE_DECISIONS.md).
 
-[FunTimeEventsAPIProxy](https://github.com/Rizzener/FunTimeEventsAPIProxy) — прозрачный reverse proxy: форвардит запросы и ключ как есть, скрывая реальный IP клиента от бэкенда.
+## Ограничения
 
-```java
-FunTimeEventsAPI.builder()
-    .userAgent("MyMod/1.0")
-    .apiKey("sk-fte-...")
-    .baseUrl("http://proxy.example.com/v1/")
-    .build();
-```
+Один глобальный runtime. Повторный Builder принимает только полностью совпадающую
+конфигурацию; конфликт явно отклоняется. `shutdown()` пока глобален: не вызывайте его
+при выходе с сервера и не используйте независимо в нескольких модах без координации.
+Доставка payload — bounded best effort, без backend ACK и exactly-once.
+Известный Windows native startup crash 26.3 остаётся **OPEN**.
 
-Подробнее — в репозитории [FunTimeEventsAPIProxy](https://github.com/Rizzener/FunTimeEventsAPIProxy).
-
----
-
-## Возможности
-
-- Баны — парсинг hover-текста из чата
-- TAB-лист — имена и донат-префиксы
-- Данжи — Медный данж и Город Вардена (сундуки + экипировка)
-- Адская резня — мобов в боссбаре через рефлексию
-- Авто-шахта — игроки вокруг на спавне
-- Координаты ивентов — парсинг чата по регуляркам
-- Капча — всегда через REST
-- GET-запросы к бэкенду — события, шахты, игроки, баны, данжи
-- User-ивенты — аирдропы, алтари нежити, загадочные маяки (`getUserEvents()`)
-- WSS (релеи, снапшоты каждую секунду) или REST (SSE-стримы)
-- Любой трекер отключается в билдере
-
----
-
-## Лицензия
-
-[`LICENSE`](LICENSE) — MIT with Backend Restriction
+Лицензия: [MIT License with Backend Restriction](LICENSE), а не стандартная MIT.

@@ -1,0 +1,40 @@
+[
+  {
+    "host":"fixture.funtime.su",
+    "actions":[
+      {"at":20,"kind":"message","id":"unresolved-first","channel":"GAME","text":"[♨] UnknownFirst забанен [Подробнее]","payload":null},
+      {"at":40,"kind":"sidebar","title":"Анархия-104"},
+      {"at":60,"kind":"message","id":"root-hover","channel":"GAME","text":"[♨] HoverRoot забанен [Подробнее]","hover":"Причина: Читы\nДо: 2027-01-01 12:00\nСервер: Анархия-77","placement":"root","payload":{"server_id":77,"server_type":"anarchy","player_name":"HoverRoot","reason":"Читы","end":"2027-01-01 12:00"}},
+      {"at":64,"kind":"message","id":"sibling-hover","channel":"GAME","text":"[♨] HoverSibling забанен [Подробнее]","hover":"Причина: Флуд\nНаказание: 7 дней","placement":"sibling","payload":{"server_id":104,"server_type":"anarchy","player_name":"HoverSibling","reason":"Флуд","end":"7 дней"}},
+      {"at":68,"kind":"message","id":"no-hover","channel":"GAME","text":"[♨] NoHover забанен [Подробнее]","payload":{"server_id":104,"server_type":"anarchy","player_name":"NoHover","reason":"","end":"Навсегда"}},
+      {"at":72,"kind":"message","id":"profileless-chat","channel":"CHAT","text":"[♨] ChatBan забанен [Подробнее]","payload":{"server_id":104,"server_type":"anarchy","player_name":"ChatBan","reason":"","end":"Навсегда"}},
+      {"at":76,"kind":"message","id":"not-a-ban","channel":"GAME","text":"Обычное сообщение phase2","hover":"Причина: Не бан","placement":"root","payload":null}
+    ]
+  },
+  {
+    "host":"second.funtime.sh",
+    "actions":[
+      {"at":20,"kind":"message","id":"no-stale-104","channel":"GAME","text":"[♨] NoStale104 забанен [Подробнее]","payload":null},
+      {"at":40,"kind":"sidebar","title":"Анархия-205"},
+      {"at":60,"kind":"message","id":"zero-server-fallback","channel":"GAME","text":"[♨] ZeroServer забанен [Подробнее]","hover":"Причина: Гриф\nОкончание: 3 дня\nСервер: Анархия-0","placement":"root","payload":{"server_id":205,"server_type":"anarchy","player_name":"ZeroServer","reason":"Гриф","end":"3 дня"}},
+      {"at":64,"kind":"sidebar","title":"Анархия-206"},
+      {"at":68,"kind":"message","id":"sidebar-change","channel":"GAME","text":"[♨] ChangedSidebar забанен [Подробнее]","payload":{"server_id":206,"server_type":"anarchy","player_name":"ChangedSidebar","reason":"","end":"Навсегда"}}
+    ]
+  },
+  {
+    "host":"example.invalid",
+    "actions":[
+      {"at":40,"kind":"sidebar","title":"Анархия-306"},
+      {"at":60,"kind":"message","id":"non-funtime-gate","channel":"GAME","text":"[♨] NotFuntime забанен [Подробнее]","hover":"Причина: Читы\nДо: Навсегда\nСервер: Анархия-999","placement":"root","payload":null}
+    ]
+  },
+  {
+    "host":"return.funtime.network",
+    "actions":[
+      {"at":20,"kind":"message","id":"no-stale-306","channel":"GAME","text":"[♨] NoStale306 забанен [Подробнее]","payload":null},
+      {"at":40,"kind":"sidebar","title":"Анархия-404"},
+      {"at":60,"kind":"message","id":"deep-hover","channel":"GAME","text":"[♨] DeepHover забанен [Подробнее]","hover":"Причина: Читы\nБан до: Навсегда\nСервер: Анархия-88","placement":"nested","payload":{"server_id":88,"server_type":"anarchy","player_name":"DeepHover","reason":"Читы","end":"Навсегда"}},
+      {"at":64,"kind":"message","id":"return-fallback","channel":"GAME","text":"[♨] ReturnFallback забанен [Подробнее]","payload":{"server_id":404,"server_type":"anarchy","player_name":"ReturnFallback","reason":"","end":"Навсегда"}}
+    ]
+  }
+]

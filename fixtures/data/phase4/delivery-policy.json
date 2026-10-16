@@ -1,0 +1,14 @@
+{
+  "snapshot_capacity":64,
+  "event_capacity":256,
+  "snapshot_ttl_seconds":15,
+  "event_ttl_seconds":30,
+  "event_burst_before_snapshot":8,
+  "snapshot_key":["message_type","server_type","server_id"],
+  "snapshots":["players","copper_dungeon","warden_city","hell_map","players_around"],
+  "events":["bans","coordinates"],
+  "snapshot_overflow":"replace_same_key_else_evict_oldest_snapshot",
+  "event_overflow":"reject_new_event_and_report",
+  "ambiguous_send_failure":"no_automatic_replay",
+  "session_end":"invalidate_unsent_and_cancel_inflight_best_effort"
+}

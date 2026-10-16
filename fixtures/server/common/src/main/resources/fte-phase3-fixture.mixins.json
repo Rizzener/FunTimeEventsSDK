@@ -1,0 +1,7 @@
+{
+  "required": true,
+  "package": "net.funtimeevents.poc.fixture.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": ["TextDisplayWriter", "PlayerInfoPacketWriter"],
+  "injectors": {"defaultRequire": 1}
+}

@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "id": "fte-example-consumer",
+  "version": "1.0.0",
+  "environment": "client",
+  "entrypoints": {"client": ["example.ExampleClient"]},
+  "depends": {"minecraft": "=${minecraft}", "java": ">=${java}", "fabricloader": ">=0.19.5", "fabric-api": "*", "fte-api": ">=2.0.0-rc.1"}
+}
