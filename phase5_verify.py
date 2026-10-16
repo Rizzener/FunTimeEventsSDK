@@ -127,6 +127,7 @@ def runtime(mc):
             checks['client_stopping_threads_empty']=rt.get('client_stopping_threads_empty',False)
             checks['client_stopping_workers']=rt.get('client_stopping_workers',False)
             checks['two_mod_last_lease']=rt.get('two_mod_last_lease',False)
+            checks['concurrent_initialization']=rt.get('concurrent_initialization',False)
             checks['lease_generations']='[HARDENING] LEASE_GENERATION_PASS' in (path.parent/'client.txt').read_text(encoding='utf-8',errors='replace')
             perf=rt['callback_performance']
             checks['old_binary_on_new_only']='[PHASE4A] OLD_BINARY_PASS' in (path.parent/'client.txt').read_text(encoding='utf-8',errors='replace')

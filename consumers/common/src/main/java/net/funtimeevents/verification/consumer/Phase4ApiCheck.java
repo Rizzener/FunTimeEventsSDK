@@ -11,12 +11,14 @@ public final class Phase4ApiCheck {
     }
     public static void run() {
         expect(IllegalArgumentException.class,()->FunTimeEventsAPI.builder().build());
+        expect(IllegalArgumentException.class,()->FunTimeEventsAPI.builder().buildLease());
         expect(IllegalArgumentException.class,()->FunTimeEventsAPI.builder().userAgent("NoKey").build());
         expect(IllegalArgumentException.class,()->offline().baseUrl("bad url").build());
         var b=Bootstrap.getInstance();
         var temporary=new TrackerRuntime(b.platform(),OfflineSender.INSTANCE,200);
         b.install(temporary);
         expect(IllegalStateException.class,()->offline().build());
+        expect(IllegalStateException.class,()->offline().buildLease());
         require(b.runtime()==temporary,"rollback detached another owner");b.detach();
         var first=offline().build();require(offline().build()==first,"equal config duplicated SDK");
         expect(IllegalStateException.class,()->offline().apiKey("different-secret-never-logged").build());

@@ -388,6 +388,33 @@ public final class Phase3Consumer implements PayloadSender {
             PeerConsumer.releaseLease();
             require(net.funtimeevents.bootstrap.Bootstrap.getInstance().runtime()==null,"Peer last lease left runtime");
             output.addProperty("two_mod_last_lease",true);
+            var pool=java.util.concurrent.Executors.newFixedThreadPool(4);
+            var barrier=new java.util.concurrent.CyclicBarrier(4);
+            var initializers=new java.util.ArrayList<java.util.concurrent.CompletableFuture<Void>>();
+            for(int i=0;i<4;i++)initializers.add(java.util.concurrent.CompletableFuture.runAsync(()->{
+                try(var owned=leaseBuilder().buildLease()) {barrier.await(10,java.util.concurrent.TimeUnit.SECONDS);}
+                catch(Exception failure) {throw new java.util.concurrent.CompletionException(failure);}
+            },pool));
+            java.util.concurrent.CompletableFuture.allOf(initializers.toArray(java.util.concurrent.CompletableFuture[]::new)).whenComplete((v,error)->{
+                pool.shutdown();
+                Minecraft.getInstance().execute(()->{
+                    try {
+                        if(error!=null)throw new IllegalStateException("Concurrent initialization failed",error);
+                        require(net.funtimeevents.bootstrap.Bootstrap.getInstance().runtime()==null,"Concurrent last close retained runtime");
+                        require(pool.awaitTermination(5,java.util.concurrent.TimeUnit.SECONDS),"Fixture workers leaked");
+                        output.addProperty("concurrent_initialization",true);
+                        armStoppingLeases(output);
+                    } catch(Throwable failure) {
+                        failure.printStackTrace();output.addProperty("status","FAIL");output.addProperty("error",failure.toString());
+                        writeResult(output);Minecraft.getInstance().stop();
+                    }
+                });
+            });
+            return;
+        }
+        Minecraft.getInstance().stop();
+    }
+    private void armStoppingLeases(JsonObject output) {
             primaryLease=leaseBuilder().buildLease();PeerConsumer.holdForStop(leaseBuilder());stopOutput=output;
             var jobs=new java.util.ArrayList<java.util.concurrent.CompletableFuture<Void>>();
             for(int i=0;i<4;i++)jobs.add(java.util.concurrent.CompletableFuture.runAsync(()->{
@@ -397,7 +424,6 @@ public final class Phase3Consumer implements PayloadSender {
                 }
             }));
             stopWorkers=java.util.concurrent.CompletableFuture.allOf(jobs.toArray(java.util.concurrent.CompletableFuture[]::new));
-        }
         Minecraft.getInstance().stop();
     }
     private void writeResult(JsonObject output) {

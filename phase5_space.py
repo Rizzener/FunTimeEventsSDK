@@ -3,7 +3,7 @@
 Raw logs, results, SDK artifacts and crash diagnostics are never removed.
 Run only after the corresponding fixture processes have exited.
 """
-import argparse,datetime,hashlib,json,shutil
+import argparse,datetime,hashlib,json,shutil,os
 from pathlib import Path
 from run_phase2 import ROOT
 
@@ -27,7 +27,7 @@ def reclaim(mc,phase2=False):
                 assert world.resolve().parent==directory
                 removed.append({'path':str(world.relative_to(ROOT)),'bytes':sum(p.stat().st_size for p in world.rglob('*') if p.is_file()),'type':'regenerable fixture world'})
                 shutil.rmtree(world)
-    out=ROOT/'results/phase6/local-environment/reclaimed-inputs';out.mkdir(parents=True,exist_ok=True)
+    out=ROOT/os.environ.get('FTE_PHASE5_EVIDENCE','results/phase6')/'local-environment/reclaimed-inputs';out.mkdir(parents=True,exist_ok=True)
     path=out/(mc+'-'+datetime.datetime.now().strftime('%Y%m%d-%H%M%S')+'.json')
     path.write_text(json.dumps({'removed':removed,'retained_input_jars':retain_jars,'backing_free_after':shutil.disk_usage(backing).free,'free_after':shutil.disk_usage(ROOT).free},indent=2)+'\n')
     print(mc,'reclaimed MiB',sum(r['bytes'] for r in removed)//1048576,'free MiB',shutil.disk_usage(ROOT).free//1048576,flush=True)
