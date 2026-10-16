@@ -1,5 +1,5 @@
 """Read hosted CI evidence using existing Git credentials; never prints credentials."""
-import argparse,datetime,hashlib,json,os,shutil,subprocess,urllib.request,urllib.error,zipfile
+import argparse,datetime,hashlib,json,os,shutil,subprocess,urllib.request,urllib.error,urllib.parse,zipfile,traceback
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 API='https://api.github.com/repos/Rizzener/FunTimeEventsSDK/'
@@ -23,19 +23,29 @@ def get(path,token):
     with urllib.request.urlopen(request(path,token),timeout=60) as r:return json.load(r)
 
 def download(path,token,target):
+    partial=target.with_name(target.name+'.part-'+datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d-%H%M%S')+'-'+str(os.getpid()))
     try:
         response=urllib.request.build_opener(NoRedirect).open(request(path,token),timeout=60)
     except urllib.error.HTTPError as e:
         if e.code!=302:raise
         location=e.headers['Location'];assert location.startswith('https://')
         # Signed artifact/log URLs are fetched without GitHub Authorization.
-        response=urllib.request.urlopen(location,timeout=60)
-    partial=target.with_name(target.name+'.part')
+        if os.environ.get('FTE_EVIDENCE_DOWNLOAD')=='curl':
+            command=['curl.exe' if os.name=='nt' else 'curl','--config','-','--fail','--silent','--show-error','--location','--proto','=https','--proto-redir','=https','--connect-timeout','15','--max-time','90','--write-out','%{response_code}','--output',str(partial)]
+            result=subprocess.run(command,input=('url = '+json.dumps(location)+'\n').encode(),capture_output=True)
+            if result.returncode==22 and result.stdout.strip().isdigit():
+                raise urllib.error.HTTPError('https://'+str(urllib.parse.urlparse(location).hostname)+'/[signed-URL-redacted]',int(result.stdout.strip()),'Artifact HTTP error',None,None)
+            if result.returncode:raise OSError('curl exit '+str(result.returncode)+' downloading '+str(urllib.parse.urlparse(location).hostname)+'; partial bytes retained')
+            partial.replace(target);return
+        try:response=urllib.request.urlopen(location,timeout=60)
+        except urllib.error.URLError as error:
+            raise urllib.error.URLError('Artifact host '+str(urllib.parse.urlparse(location).hostname)+': '+str(error.reason)) from None
     with response,partial.open('wb') as f:shutil.copyfileobj(response,f)
     partial.replace(target)
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--run-id',type=int,required=True);p.add_argument('--collect',action='store_true');p.add_argument('--collect-attempt',type=int);p.add_argument('--collect-available',action='store_true');p.add_argument('--rerun-all',action='store_true');p.add_argument('--cancel-superseded',action='store_true');p.add_argument('--cancel-reason',default='Superseded by expanded mandatory release checks; no SDK source change.');a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--run-id',type=int,required=True);p.add_argument('--collect',action='store_true');p.add_argument('--collect-attempt',type=int);p.add_argument('--collect-available',action='store_true');p.add_argument('--rerun-all',action='store_true');p.add_argument('--cancel-superseded',action='store_true');p.add_argument('--cancel-reason',default='Superseded by expanded mandatory release checks; no SDK source change.');p.add_argument('--download-transport',choices=['urllib','curl'],default='urllib');a=p.parse_args()
+    os.environ['FTE_EVIDENCE_DOWNLOAD']=a.download_transport
     if a.collect_attempt:
         assert a.collect_attempt>0
         token=credential();base=f'actions/runs/{a.run_id}/attempts/{a.collect_attempt}'
@@ -92,11 +102,19 @@ def main():
                     if error.code!=404:raise
                     (out/(stamp+'-'+artifact['name']+'-unavailable.json')).write_text(json.dumps({'artifact':artifact,'http_status':404,'status':'NOT COLLECTED','note':'Metadata exists, blob temporarily absent or canceled upload incomplete; next collection retries. Not counted as evidence.'},indent=2)+'\n')
                     print('ARTIFACT_BLOB_NOT_COLLECTED',artifact['name']);continue
+                except (urllib.error.URLError,TimeoutError,OSError) as error:
+                    (out/(stamp+'-'+artifact['name']+'-transport-error.json')).write_text(json.dumps({'artifact_id':artifact['id'],'name':artifact['name'],'status':'NOT COLLECTED','error':str(error),'note':'No artifact success inferred. A later sequential collection retries.'},indent=2)+'\n')
+                    print('ARTIFACT_TRANSPORT_NOT_COLLECTED',artifact['name'],str(error),flush=True);continue
             extracted=out/artifact['name'];extracted.mkdir(exist_ok=True)
             receipt=extracted/'.extraction-complete.json'
             archive_hash=hashlib.sha256(dest.read_bytes()).hexdigest()
             expected={'artifact_id':artifact['id'],'archive_sha256':archive_hash,'run_id':a.run_id}
             if receipt.exists() and json.loads(receipt.read_text())==expected:continue
+            if not zipfile.is_zipfile(dest):
+                invalid=out/(artifact['name']+'-invalid-'+stamp+'.zip')
+                assert not invalid.exists();dest.rename(invalid)
+                (out/(stamp+'-'+artifact['name']+'-invalid.json')).write_text(json.dumps({'status':'INVALID ZIP / NOT COLLECTED','artifact':artifact,'raw_file':invalid.name,'bytes':invalid.stat().st_size,'sha256':archive_hash,'note':'Raw bytes retained. ZIP central directory absent or invalid; not extracted or counted as PASS. A later collection can retry.'},indent=2)+'\n')
+                print('ARTIFACT_INVALID_ZIP_RETAINED',invalid.name,flush=True);continue
             with zipfile.ZipFile(dest) as z:
                 assert all((extracted/n).resolve().is_relative_to(extracted.resolve()) for n in z.namelist())
                 z.extractall(extracted)
@@ -113,4 +131,9 @@ def main():
                     if error.code!=404:raise
                     (out/('job-'+str(job['id'])+'-log-unavailable.json')).write_text(json.dumps({'job':job['id'],'status':job['status'],'conclusion':job['conclusion'],'http_status':404,'note':'GitHub has no log blob, e.g. canceled job that never started. Workflow logs and artifacts retained separately.'},indent=2)+'\n')
 
-if __name__=='__main__':main()
+if __name__=='__main__':
+    try:main()
+    except Exception:
+        out=EVIDENCE/'collection-errors';out.mkdir(parents=True,exist_ok=True)
+        (out/(datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d-%H%M%S')+'.txt')).write_text(traceback.format_exc(),encoding='utf-8')
+        raise
