@@ -1,0 +1,76 @@
+package net.funtimeevents.net;
+import java.io.*;
+import java.net.*;
+import java.net.http.*;
+import java.nio.ByteBuffer;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
+import javax.net.ssl.*;
+
+/** JDK interface seam for deterministic late callbacks and send-future failures. */
+final class FakeSocketClient extends HttpClient {
+    final List<Socket> sockets=new CopyOnWriteArrayList<>();
+    volatile boolean autoAuth=true,holdMessages=true,delayOpen;
+    volatile boolean shutdown;
+    volatile CompletableFuture<WebSocket> delayed;
+    public WebSocket.Builder newWebSocketBuilder(){return new WebSocket.Builder(){
+        public WebSocket.Builder header(String n,String v){return this;}
+        public WebSocket.Builder connectTimeout(Duration d){return this;}
+        public WebSocket.Builder subprotocols(String most,String... less){return this;}
+        public CompletableFuture<WebSocket> buildAsync(URI uri,WebSocket.Listener listener){
+            var socket=new Socket(listener,FakeSocketClient.this);sockets.add(socket);
+            if(delayOpen){delayed=new CompletableFuture<>();return delayed;}
+            listener.onOpen(socket);return CompletableFuture.completedFuture(socket);
+        }
+    };}
+    static final class Socket implements WebSocket {
+        final Listener listener;final FakeSocketClient client;
+        final List<String> sent=new CopyOnWriteArrayList<>();
+        final AtomicInteger active=new AtomicInteger(),maxPending=new AtomicInteger();
+        volatile boolean aborted;
+        volatile CompletableFuture<WebSocket> held;
+        Socket(Listener listener,FakeSocketClient client){this.listener=listener;this.client=client;}
+        public CompletableFuture<WebSocket> sendText(CharSequence data,boolean last){
+            if(aborted)return CompletableFuture.failedFuture(new IOException("socket closed"));
+            int count=active.incrementAndGet();maxPending.accumulateAndGet(count,Math::max);
+            var future=new CompletableFuture<WebSocket>();
+            // Publish completion only after the fake's pending count is updated.
+            // get() on the root can return before dependent whenComplete runs.
+            var observed=future.whenComplete((v,e)->active.decrementAndGet());
+            if(data.toString().contains("\"type\":\"auth\"")) {
+                future.complete(this);
+                if(client.autoAuth)listener.onText(this,"{\"type\":\"auth_ok\"}",true);
+            } else if(client.holdMessages)held=future;else future.complete(this);
+            sent.add(data.toString());return observed;
+        }
+        void complete(){var f=held;if(f==null)throw new AssertionError("no held send");f.complete(this);}
+        public CompletableFuture<WebSocket> sendBinary(ByteBuffer d,boolean l){return CompletableFuture.failedFuture(new AssertionError("binary protocol changed"));}
+        public CompletableFuture<WebSocket> sendPing(ByteBuffer d){return CompletableFuture.completedFuture(this);}
+        public CompletableFuture<WebSocket> sendPong(ByteBuffer d){return CompletableFuture.completedFuture(this);}
+        public CompletableFuture<WebSocket> sendClose(int code,String reason){listener.onClose(this,code,reason);return CompletableFuture.completedFuture(this);}
+        public void request(long n){}
+        public String getSubprotocol(){return "";}
+        public boolean isInputClosed(){return aborted;}
+        public boolean isOutputClosed(){return aborted;}
+        public void abort(){aborted=true;var f=held;if(f!=null&&!f.isDone())f.completeExceptionally(new IOException("aborted"));}
+    }
+    public void shutdown(){shutdown=true;}
+    public void shutdownNow(){shutdown=true;}
+    public boolean isTerminated(){return shutdown;}
+    public boolean awaitTermination(Duration timeout){return shutdown;}
+    public void close(){shutdownNow();}
+    public Optional<CookieHandler> cookieHandler(){return Optional.empty();}
+    public Optional<Duration> connectTimeout(){return Optional.of(Duration.ofSeconds(1));}
+    public Redirect followRedirects(){return Redirect.NEVER;}
+    public Optional<ProxySelector> proxy(){return Optional.empty();}
+    public SSLContext sslContext(){try{return SSLContext.getDefault();}catch(Exception e){throw new IllegalStateException(e);}}
+    public SSLParameters sslParameters(){return new SSLParameters();}
+    public Optional<Authenticator> authenticator(){return Optional.empty();}
+    public Version version(){return Version.HTTP_1_1;}
+    public Optional<Executor> executor(){return Optional.empty();}
+    public <T>HttpResponse<T> send(HttpRequest r,HttpResponse.BodyHandler<T>b){throw new UnsupportedOperationException();}
+    public <T>CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest r,HttpResponse.BodyHandler<T>b){return CompletableFuture.failedFuture(new UnsupportedOperationException());}
+    public <T>CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest r,HttpResponse.BodyHandler<T>b,HttpResponse.PushPromiseHandler<T>p){return sendAsync(r,b);}
+}

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "${consumerId}",
+  "version": "${version}",
+  "name": "Independent PoC Maven consumer ${minecraft}",
+  "environment": "client",
+  "entrypoints": { "client": ["net.funtimeevents.poc.consumer.PocConsumer"] },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "=${minecraft}",
+    "java": ">=${java}",
+    "fabric-api": "*",
+    "fte-multiversion-poc": "=${version}"
+  }
+}

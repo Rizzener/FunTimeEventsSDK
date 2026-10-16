@@ -1,0 +1,139 @@
+# Template, intentionally isolated from the release repository workflow directory.
+# Copy to .github/workflows/phase5.yml when explicitly integrating CI.
+name: Isolated SDK Phase 5
+on: workflow_dispatch
+permissions:
+  contents: read
+env:
+  FTE_PHASE5_EVIDENCE: results/phase5/github/${{ github.run_id }}
+  LIBGL_ALWAYS_SOFTWARE: '1'
+  ALSOFT_DRIVERS: 'null'
+defaults:
+  run:
+    working-directory: poc/multiversion
+    shell: bash
+jobs:
+  matrix:
+    runs-on: ubuntu-24.04
+    outputs:
+      targets: ${{ steps.targets.outputs.targets }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - id: targets
+        run: python3 -c 'import json,os; c=json.load(open("targets.json")); open(os.environ["GITHUB_OUTPUT"],"a").write("targets="+json.dumps([t["minecraft"] for t in c["targets"]])+"\n")'
+  compile:
+    needs: matrix
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: {mc: '${{ fromJSON(needs.matrix.outputs.targets) }}'}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - run: sh ci/phase5/bootstrap-ci.sh
+      - run: sh ci/phase5/job.sh compile '${{ matrix.mc }}'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: compile-${{ matrix.mc }}
+          path: poc/multiversion/${{ env.FTE_PHASE5_EVIDENCE }}/
+          if-no-files-found: error
+  publication:
+    needs: [matrix, compile]
+    if: ${{ always() && needs.matrix.result == 'success' }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: {mc: '${{ fromJSON(needs.matrix.outputs.targets) }}'}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: compile-${{ matrix.mc }}
+          path: poc/multiversion/${{ env.FTE_PHASE5_EVIDENCE }}/
+      - run: sh ci/phase5/bootstrap-ci.sh
+      - run: sh ci/phase5/job.sh publish '${{ matrix.mc }}'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: publication-${{ matrix.mc }}
+          path: |
+            poc/multiversion/${{ env.FTE_PHASE5_EVIDENCE }}/
+            poc/multiversion/build/phase5-maven/
+          if-no-files-found: error
+  consumer:
+    needs: [matrix, publication]
+    if: ${{ always() && needs.matrix.result == 'success' }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: {mc: '${{ fromJSON(needs.matrix.outputs.targets) }}'}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: publication-${{ matrix.mc }}
+          path: poc/multiversion/
+      - run: sh ci/phase5/bootstrap-ci.sh
+      - run: sh ci/phase5/job.sh consumer '${{ matrix.mc }}'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: consumer-${{ matrix.mc }}
+          path: |
+            poc/multiversion/${{ env.FTE_PHASE5_EVIDENCE }}/
+            poc/multiversion/build/phase5-maven/
+            poc/multiversion/consumers/mc${{ matrix.mc }}/build/libs/
+          if-no-files-found: error
+  runtime:
+    needs: [matrix, consumer]
+    if: ${{ always() && needs.matrix.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: {mc: '${{ fromJSON(needs.matrix.outputs.targets) }}'}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: consumer-${{ matrix.mc }}
+          path: poc/multiversion/
+      - run: sh ci/phase5/bootstrap-ci.sh
+      - run: sh ci/phase5/job.sh runtime '${{ matrix.mc }}'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: runtime-${{ matrix.mc }}
+          path: |
+            poc/multiversion/${{ env.FTE_PHASE5_EVIDENCE }}/
+            poc/multiversion/consumers/mc${{ matrix.mc }}/build/phase3-client/hs_err_pid*.log
+            poc/multiversion/consumers/mc${{ matrix.mc }}/build/phase3-client/crash-reports/
+          if-no-files-found: error
+  summary:
+    needs: [matrix, compile, publication, consumer, runtime]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: runtime-*
+          merge-multiple: true
+          path: poc/multiversion/
+      - run: python3 phase5_verify.py --stage summary
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: phase5-summary
+          path: poc/multiversion/${{ env.FTE_PHASE5_EVIDENCE }}/
+          if-no-files-found: error

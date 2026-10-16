@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "fte-multiversion-poc",
+  "version": "${version}",
+  "name": "FunTimeEvents isolated multi-version PoC",
+  "environment": "client",
+  "license": "MIT",
+  "mixins": ["fte-trackers.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "=${minecraft}",
+    "java": ">=${java}",
+    "fabric-api": "*"
+  }
+}

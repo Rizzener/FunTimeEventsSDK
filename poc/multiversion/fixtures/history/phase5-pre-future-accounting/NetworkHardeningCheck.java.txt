@@ -1,0 +1,186 @@
+package net.funtimeevents.net;
+import com.google.gson.*;
+import net.funtimeevents.model.*;
+import net.funtimeevents.net.cache.*;
+import net.funtimeevents.spi.*;
+import net.funtimeevents.util.GsonHolder;
+import java.io.*;
+import java.net.*;
+import java.net.http.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
+import java.util.function.*;
+import java.util.zip.GZIPOutputStream;
+
+public final class NetworkHardeningCheck {
+    private static String base;
+    private static final HttpClient observer=HttpClient.newHttpClient();
+    static String ua(String label){return label+"/"+Runtime.version().feature();}
+    private static final Map<String,Boolean> checks=new LinkedHashMap<>();
+    private static final Map<String,String> errors=new LinkedHashMap<>();
+    @FunctionalInterface interface Test{void run()throws Exception;}
+    static void check(String name,Test test){try{test.run();checks.put(name,true);System.out.println("[HARDENING] PASS "+name);}catch(Throwable e){checks.put(name,false);errors.put(name,e.toString());e.printStackTrace();}}
+    static void require(boolean ok,String message){if(!ok)throw new AssertionError(message);}
+    static void waitFor(BooleanSupplier condition,String label)throws Exception{long until=System.nanoTime()+TimeUnit.SECONDS.toNanos(5);while(!condition.getAsBoolean()&&System.nanoTime()<until)Thread.sleep(5);require(condition.getAsBoolean(),label);}
+    static TabPlayersPayload tab(int id,String name){return new TabPlayersPayload(id,"anarchy",List.of(new ObservedPlayer(name,"⚡TEST","<ISO8601>")));}
+    static BanPayload ban(String name){return new BanPayload(401,"anarchy",name,"fixture","forever");}
+    static JsonArray records()throws Exception{return JsonParser.parseString(observer.send(HttpRequest.newBuilder(URI.create(base+"/__records")).build(),HttpResponse.BodyHandlers.ofString()).body()).getAsJsonObject().getAsJsonArray("records");}
+    static long count(String kind,String agent)throws Exception{return records().asList().stream().map(JsonElement::getAsJsonObject).filter(r->r.get("kind").getAsString().equals(kind)&&
+        (r.has("user_agent")?r.get("user_agent").getAsString():r.has("headers")&&r.getAsJsonObject("headers").has("User-Agent")?r.getAsJsonObject("headers").get("User-Agent").getAsString():"").equals(agent)).count();}
+    public static void main(String[] args)throws Exception {
+        base=args[0];
+        check("bounded_queue_coalescing_FIFO_fairness_TTL",NetworkHardeningCheck::queue);
+        check("session_tickets_cancel_and_atomic_dispatch",NetworkHardeningCheck::tickets);
+        check("HTTP_off_caller_gzip_failure_and_stale_preparation",NetworkHardeningCheck::http);
+        check("HTTP_bounded_requests_and_shutdown",NetworkHardeningCheck::requestLimit);
+        check("WS_serial_futures_failure_no_replay_and_old_callbacks",NetworkHardeningCheck::sockets);
+        check("WS_auth_timeout_handshake_shutdown_and_watchdog",NetworkHardeningCheck::socketLifecycle);
+        check("SSE_fresh_requests_status_reconnect_and_explicit_close",NetworkHardeningCheck::streams);
+        check("SSE_late_future_restart_and_multiline",NetworkHardeningCheck::lateStream);
+        check("atomic_caches_and_defensive_response_lists",NetworkHardeningCheck::caches);
+        check("owned_threads_shutdown",()->waitFor(()->Thread.getAllStackTraces().keySet().stream().noneMatch(t->t.isAlive()&&
+            (t.getName().startsWith("FTE-")||t.getName().startsWith("Hardening-"))),"owned threads leaked"));
+        var result=new LinkedHashMap<String,Object>();result.put("java",Runtime.version().toString());result.put("checks",checks);result.put("errors",errors);
+        result.put("status",checks.containsValue(false)?"FAIL":"PASS");Files.writeString(Path.of(args[1]),GsonHolder.INSTANCE.toJson(result));
+        observer.shutdownNow();if(checks.containsValue(false))throw new AssertionError(errors.toString());
+    }
+    static void queue() {
+        var now=new AtomicLong();var q=new PayloadQueue(now::get);var ticket=SessionFence.unscoped();
+        for(int i=0;i<10000;i++)q.offer("players",tab(401,"P"+i),ticket);
+        require(q.stats().snapshots()==1&&q.stats().coalesced()==9999,"snapshots not coalesced");
+        for(int i=0;i<256;i++)require(q.offer("bans",ban("B"+i),ticket),"event rejected early");
+        require(!q.offer("bans",ban("overflow"),ticket)&&q.stats().events()==256,"event queue not bounded");
+        for(int i=0;i<8;i++)require(((BanPayload)q.pollNow().body()).playerName().equals("B"+i),"event FIFO");
+        require(((TabPlayersPayload)q.pollNow().body()).playersList().get(0).playerName().equals("P9999"),"snapshot fairness/latest");q.close();
+        q=new PayloadQueue(now::get);for(int i=0;i<65;i++)q.offer("players",tab(i,"X"),ticket);
+        require(q.stats().snapshots()==64&&q.stats().evicted()==1,"snapshot capacity");require(((TabPlayersPayload)q.pollNow().body()).serverId()==1,"snapshot eviction order");q.close();
+        q=new PayloadQueue(now::get);q.offer("players",tab(1,"X"),ticket);q.offer("bans",ban("X"),ticket);now.set(TimeUnit.SECONDS.toNanos(16));
+        require(q.stats().snapshots()==0&&q.stats().events()==1,"snapshot TTL");now.set(TimeUnit.SECONDS.toNanos(31));require(q.stats().events()==0&&q.stats().expired()==2,"event TTL");
+    }
+    static void tickets()throws Exception {
+        var fence=new SessionFence();fence.begin();var old=fence.capture();var pending=new CompletableFuture<String>();old.dispatch(()->pending);
+        fence.end();require(pending.isCancelled()&&!old.valid(),"inflight not cancelled");fence.begin();var next=fence.capture();var called=new AtomicInteger();
+        require(old.dispatch(()->{called.incrementAndGet();return CompletableFuture.completedFuture("bad");}).isCompletedExceptionally()&&called.get()==0,"stale dispatch initiated");
+        require(next.dispatch(()->CompletableFuture.completedFuture("good")).join().equals("good"),"new session not active");
+        var q=new PayloadQueue();ExecutorService producers=Executors.newFixedThreadPool(4);
+        try {
+            var work=new ArrayList<Future<?>>();for(int n=0;n<4;n++)work.add(producers.submit(()->{for(int i=0;i<5000;i++)q.offer("players",tab(i%70,"P"),fence.capture());}));
+            for(int i=0;i<1000;i++){fence.end();fence.begin();}for(var f:work)f.get(5,TimeUnit.SECONDS);
+            require(q.stats().snapshots()<=64&&q.stats().events()<=256,"concurrent queue overflow");fence.end();require(q.stats().snapshots()==0,"stale tickets retained");
+        }finally{producers.shutdownNow();q.close();}
+    }
+    static void http()throws Exception {
+        var thread=new AtomicReference<String>();var calls=new AtomicInteger();
+        try(var client=new ApiClient(base+"/v1","phase4-local-key",ua("HardeningHTTP"),true)) {
+            String original=Thread.currentThread().getName();try{Thread.currentThread().setName("Render thread");client.sendTabPlayers(new TabPlayersPayload(401,"anarchy",new NetworkFaultProbe.ObservedList(thread,calls)));}finally{Thread.currentThread().setName(original);}
+            waitFor(()->thread.get()!=null,"HTTP never prepared");require(!thread.get().equals("Render thread")&&thread.get().startsWith("FTE-HTTP"),"JSON on caller");
+            require(client.getEvents(null).get(5,TimeUnit.SECONDS)!=null,"null optional GET params");
+        }
+        try(var bad=new ApiClient(base+"/v1","phase4-local-key",ua("GzipFault"),true,null,data->{throw new UncheckedIOException(new IOException("injected gzip failure"));})) {
+            bad.sendBan(ban("must-not-send"));require(bad.solveCaptcha("AA==").get(5,TimeUnit.SECONDS)==null,"gzip failure response");
+            waitFor(()->bad.failures()>=2,"gzip failures not observed");require(count("http",ua("GzipFault"))==0,"gzip failure submitted HTTP/plain bytes");
+        }
+        var fence=new SessionFence();fence.begin();var preparing=new CountDownLatch(1);var release=new CountDownLatch(1);
+        try(var scoped=new ApiClient(base+"/v1","phase4-local-key",ua("StaleHTTP"),true,fence,data->{
+            preparing.countDown();try{if(!release.await(5,TimeUnit.SECONDS))throw new AssertionError("prepare release timeout");var out=new ByteArrayOutputStream();try(var zip=new GZIPOutputStream(out)){zip.write(data);}return out.toByteArray();}
+            catch(Exception e){throw new IllegalStateException(e);}
+        })) {
+            scoped.sendBan(ban("OLD"));require(preparing.await(5,TimeUnit.SECONDS),"old preparation not started");fence.end();fence.begin();release.countDown();
+            scoped.sendBan(ban("NEW"));waitFor(()->{try{return count("post",ua("StaleHTTP"))>=1;}catch(Exception e){throw new IllegalStateException(e);}},"new session not sent");
+            var sent=new ArrayList<String>();for(var v:records()){var r=v.getAsJsonObject();if(r.get("kind").getAsString().equals("post")&&r.get("user_agent").getAsString().equals(ua("StaleHTTP")))sent.add(r.getAsJsonObject("payload").get("player_name").getAsString());}
+            require(sent.equals(List.of("NEW")),"old prepared payload escaped session fence "+sent);
+        }finally{release.countDown();}
+    }
+    static void requestLimit()throws Exception {
+        var client=new ApiClient(base+"/timeout/v1","phase4-local-key",ua("BoundedRequests"),false);var futures=new ArrayList<CompletableFuture<String>>();
+        try{for(int i=0;i<100;i++)futures.add(client.getEvents(Map.of()));require(client.queuedRequests()<=64&&client.outstandingRequests()<=66,"request preparation unbounded");}
+        finally{client.close();}
+        waitFor(()->futures.stream().allMatch(CompletableFuture::isDone),"queued futures hung on shutdown");
+        waitFor(client::resourcesTerminated,"HTTP transport resources not terminated");
+    }
+    static RelayClient relay(FakeSocketClient driver,long auth,long idle){return new RelayClient("ws://fixture.invalid/relay","phase4-local-key","HardeningWS",false,null,driver,auth,idle,10);}
+    static void sockets()throws Exception {
+        var driver=new FakeSocketClient();var relay=relay(driver,2000,10000);var cache=new RelayCache();relay.setCache(cache);
+        try {
+            relay.connect();relay.connect();waitFor(()->driver.sockets.size()==1&&!driver.sockets.get(0).sent.isEmpty(),"auth not sent");var first=driver.sockets.get(0);
+            relay.sendBan(ban("A"));relay.sendBan(ban("B"));relay.sendBan(ban("C"));
+            waitFor(()->first.sent.size()==2,"first application send");Thread.sleep(30);require(first.sent.size()==2,"sendText overlapped");first.complete();
+            waitFor(()->first.sent.size()==3,"second send");first.complete();waitFor(()->first.sent.size()==4,"third send");first.complete();
+            require(first.maxPending.get()==1,"concurrent text sends");
+            relay.sendBan(ban("AMBIGUOUS"));waitFor(()->first.sent.size()==5,"failure send not started");first.held.completeExceptionally(new IOException("injected send failure"));
+            waitFor(()->driver.sockets.size()>=2&&!driver.sockets.get(1).sent.isEmpty(),"no reconnect after failed future");var second=driver.sockets.get(1);
+            first.listener.onClose(first,4001,"stale");first.listener.onError(first,new IOException("stale error"));
+            first.listener.onText(first,"{\"type\":\"auth_ok\"}",true);
+            first.listener.onText(first,"{\"type\":\"snapshot\",\"events\":[{\"server_id\":999}]}",true);
+            second.listener.onText(second,"{\"type\":\"snapshot\",\"events\":[{\"server_id\":401}]}",true);
+            require(cache.getEvents().size()==1&&cache.getEvents().get(0).serverId()==401,"old callback corrupted cache");
+            relay.sendBan(ban("AFTER"));waitFor(()->second.sent.size()==2,"new connection invalidated by stale callback");second.complete();
+            require(second.sent.get(1).contains("AFTER")&&!second.sent.toString().contains("AMBIGUOUS"),"ambiguous frame replayed");require(relay.sendFailures()==1,"send result ignored");
+        }finally{relay.disconnect();}
+    }
+    static void socketLifecycle()throws Exception {
+        var rejected=new RelayClient(base.replace("https://","wss://").replace("http://","ws://")+"/reject/v1/relay","wrong-local-key",ua("RejectedWS"),false);
+        try {
+            rejected.connect();
+            waitFor(()->{try{return count("ws_closed",ua("RejectedWS"))==1;}catch(Exception e){throw new IllegalStateException(e);}},"real auth rejection not closed");
+            rejected.sendBan(ban("REJECTED"));Thread.sleep(1300);
+            require(count("ws_open",ua("RejectedWS"))==1,"auth rejection retried");
+            require(count("post",ua("RejectedWS"))==0,"payload sent after rejection");
+        }finally{rejected.disconnect();}
+        var noauth=new FakeSocketClient();noauth.autoAuth=false;var relay=relay(noauth,50,10000);
+        try {relay.connect();waitFor(()->noauth.sockets.size()>=2,"auth timeout did not reconnect");require(noauth.sockets.get(0).aborted,"auth timeout leaked socket");}
+        finally{relay.disconnect();}
+        var delayed=new FakeSocketClient();delayed.delayOpen=true;relay=relay(delayed,500,10000);
+        try {relay.connect();waitFor(()->delayed.delayed!=null,"handshake not started");relay.disconnect();var late=delayed.sockets.get(0);late.listener.onOpen(late);require(late.aborted&&delayed.delayed.isCancelled(),"late onOpen resurrected shutdown");}
+        finally{relay.disconnect();}
+        var silent=new FakeSocketClient();relay=relay(silent,1000,50);
+        try {relay.connect();waitFor(()->silent.sockets.size()>=2,"watchdog did not reconnect");require(silent.sockets.get(0).aborted,"watchdog old socket open");}
+        finally{relay.disconnect();}
+    }
+    static void streams()throws Exception {
+        try(var rest=new ApiClient(base+"/eof/v1","phase4-local-key",ua("SSEFactory"),false)) {
+            var sse=new SseCache<EventResponse>("Hardening-SSE-EOF",EventResponse.class,e->"x");
+            try{sse.startWith(rest::streamEvents);long until=System.nanoTime()+TimeUnit.SECONDS.toNanos(9);
+                while(count("sse_open",ua("SSEFactory"))<2&&System.nanoTime()<until)Thread.sleep(50);
+                require(count("sse_open",ua("SSEFactory"))>=2,"SSE reused completed future");waitFor(()->!sse.getData().isEmpty(),"new SSE body not parsed");}
+            finally{sse.stop();}
+        }
+        try(var rest=new ApiClient(base+"/status/v1","phase4-local-key",ua("SSEStatus"),false)) {
+            var sse=new SseCache<EventResponse>("Hardening-SSE-Status",EventResponse.class,e->"x");
+            try{sse.startWith(rest::streamEvents);long until=System.nanoTime()+TimeUnit.SECONDS.toNanos(9);while(sse.getData().isEmpty()&&System.nanoTime()<until)Thread.sleep(30);
+                require(!sse.getData().isEmpty()&&count("sse_open",ua("SSEStatus"))>=2,"non-200 reconnect");}
+            finally{sse.stop();}
+        }
+        var blocking=new NetworkFaultProbe.BlockingInput();var sse=new SseCache<EventResponse>("Hardening-SSE-Block",EventResponse.class,e->"x");
+        sse.start(CompletableFuture.completedFuture(new NetworkFaultProbe.Response(blocking)));require(blocking.reading.await(2,TimeUnit.SECONDS),"reader not blocked");
+        long at=System.nanoTime();sse.stop();require(blocking.closed&&System.nanoTime()-at<1_000_000_000L,"stop did not explicitly close stream");
+        try(var rest=new ApiClient(base+"/hang/v1","phase4-local-key",ua("SSEHang"),false)) {
+            var hanging=new SseCache<EventResponse>("Hardening-SSE-Hang",EventResponse.class,e->"x");hanging.startWith(rest::streamEvents);
+            waitFor(()->{try{return count("sse_open",ua("SSEHang"))>0;}catch(Exception e){throw new IllegalStateException(e);}},"real hanging stream not open");Thread.sleep(50);hanging.stop();
+            waitFor(()->Thread.getAllStackTraces().keySet().stream().noneMatch(t->t.isAlive()&&t.getName().equals("Hardening-SSE-Hang")),"real reader leaked");
+        }
+    }
+    static void lateStream()throws Exception {
+        var old=new CompletableFuture<HttpResponse<InputStream>>(){public boolean cancel(boolean interrupt){return false;}};
+        var supplied=new CountDownLatch(1);var sse=new SseCache<EventResponse>("Hardening-SSE-Late",EventResponse.class,e->"x");
+        sse.startWith(()->{supplied.countDown();return old;});require(supplied.await(2,TimeUnit.SECONDS),"old source not requested");sse.stop();
+        String multiline=": heartbeat\ndata:{\"data\":[\ndata: {\"server_id\":42}\ndata: ]}\n\n";
+        sse.start(CompletableFuture.completedFuture(new NetworkFaultProbe.Response(new ByteArrayInputStream(multiline.getBytes(StandardCharsets.UTF_8)))));
+        waitFor(()->!sse.getData().isEmpty(),"multiline/data-without-space not parsed");
+        var body=new NetworkFaultProbe.BlockingInput();old.complete(new NetworkFaultProbe.Response(body));waitFor(()->body.closed,"late response stream leaked");
+        require(sse.getData().get(0).serverId()==42,"late old stream overwrote new state");sse.stop();
+    }
+    static void caches()throws Exception {
+        var cache=new RelayCache();var array=new JsonArray();for(int i=0;i<256;i++){var e=new JsonObject();e.addProperty("server_id",i);array.add(e);}
+        String json="{\"type\":\"snapshot\",\"events\":"+array+"}";cache.updateFromSnapshot(json);
+        var partial=new AtomicBoolean();var stop=new AtomicBoolean();var reader=new Thread(()->{while(!stop.get())if(cache.getEvents().size()!=256)partial.set(true);},"Hardening-Cache-Reader");
+        reader.start();try{for(int i=0;i<120;i++)cache.updateFromSnapshot(json);}finally{stop.set(true);reader.join();}
+        require(!partial.get(),"partial cache read");cache.updateFromSnapshot("{\"type\":\"snapshot\",\"events\":[null]}");require(cache.getEvents().size()==256,"malformed snapshot replaced state");
+        cache.updateFromSnapshot("{\"type\":\"snapshot\",\"copper_dungeons\":[{\"server_id\":1,\"chests\":[{\"x\":1}],\"players\":[]}],\"mines\":[{\"server_id\":1,\"mine_info\":{\"players_around\":[{\"player_name\":\"X\"}]}}]}");
+        cache.getCopperDungeons().get(0).chests().clear();cache.getMines().get(0).mineInfo().playersAround().clear();
+        require(cache.getCopperDungeons().get(0).chests().size()==1&&cache.getMines().get(0).mineInfo().playersAround().size()==1,"caller mutated cached backing list");
+    }
+}

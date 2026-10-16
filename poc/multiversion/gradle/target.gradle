@@ -1,0 +1,236 @@
+// Shared build rules; no dependency on the existing release SDK build.
+def matrix = new groovy.json.JsonSlurper().parse(rootProject.file('targets.json'))
+def spec = matrix.targets.find { 'mc'+it.minecraft == project.name }
+if(spec == null)throw new GradleException('Missing target configuration for '+project.name)
+def mc = spec.minecraft
+def language = spec.java as int
+project.ext.targetMinecraft=mc
+project.ext.targetJava=language
+project.ext.targetApi=spec.fabric_api
+def legacy = language == 21
+base { archivesName = project.name }
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(language)
+    withSourcesJar()
+}
+tasks.withType(JavaCompile).configureEach {
+    options.release = language
+    options.encoding = 'UTF-8'
+}
+spec.platform_sources.each { sourceSets.main.java.srcDir(rootProject.file("platform/${it}/src/main/java")) }
+dependencies {
+    minecraft "com.mojang:minecraft:${mc}"
+    if (legacy) mappings loom.officialMojangMappings()
+    // Core is bundled by us, never published as a transitive runtime dependency.
+    compileOnly project(':core')
+    if (legacy) {
+        modCompileOnly "net.fabricmc:fabric-loader:${matrix.loader}"
+        modCompileOnly "net.fabricmc.fabric-api:fabric-api:${project.ext.targetApi}"
+    } else {
+        compileOnly "net.fabricmc:fabric-loader:${matrix.loader}"
+        compileOnly "net.fabricmc.fabric-api:fabric-api:${project.ext.targetApi}"
+    }
+    productionRuntimeMods "net.fabricmc.fabric-api:fabric-api:${project.ext.targetApi}"
+}
+def fixture = sourceSets.create('serverFixture') {
+    spec.fixture_sources.each { java.srcDir(rootProject.file("fixtures/server/${it}/src/main/java")) }
+    resources.srcDir(rootProject.file('fixtures/data'))
+    compileClasspath += sourceSets.main.compileClasspath
+    runtimeClasspath += sourceSets.main.runtimeClasspath
+}
+tasks.named(fixture.processResourcesTaskName) {
+    inputs.properties(version: project.version, minecraft: mc, java: language)
+    from(rootProject.file('fixtures/server/common/src/main/resources')) {
+        expand(version: project.version, minecraft: mc, java: language)
+    }
+}
+def serverJar = tasks.register('serverFixtureJar', Jar) {
+    from fixture.output
+    archiveClassifier = 'server-fixture'
+    if (legacy) archiveClassifier = 'server-fixture-dev'
+}
+def productionServerJar = serverJar
+if (legacy) {
+    productionServerJar = tasks.named('remapServerFixtureJar') {
+        dependsOn serverJar
+        inputFile = serverJar.flatMap { it.archiveFile }
+        archiveClassifier = 'server-fixture'
+        addNestedDependencies = false
+    }
+}
+tasks.named('phase2Server') {
+    outputs.upToDateWhen { false }
+    installerVersion = matrix.installer
+    loaderVersion = matrix.loader
+    mods.setFrom(productionServerJar)
+    mods.from(configurations.productionRuntimeMods)
+    def phase3 = providers.gradleProperty('phase3').isPresent()
+    def fixtureWorld = phase3 ? "phase3-world-${System.currentTimeMillis()}" : 'phase2-world'
+    runDir = layout.buildDirectory.dir(phase3 ? 'phase3-server' : 'phase2-server')
+    if (phase3) jvmArgs.add('-Dfte.phase3=true')
+    if (providers.gradleProperty('phase4stage').isPresent())jvmArgs.add('-Dfte.phase4.fixture=true')
+    // Phase 5 scenarios require the real scene before the first scheduled scan.
+    // Use vanilla server chunk tickets; the SDK cadence and golden stay fixed.
+    if (providers.gradleProperty('phase5_port').isPresent() && findProperty('phase5_preload') != 'false')
+        jvmArgs.add('-Dfte.phase5.preload=true')
+    programArgs.add('nogui')
+    jvmArgs.addAll('-Xmx1G', '-Dfile.encoding=UTF-8')
+    doFirst {
+        def dir = runDir.get().asFile
+        dir.mkdirs()
+        if(providers.gradleProperty('phase5_port').isPresent()) {
+            // Fabric Installer 1.1.2 ServerLauncher uses this exact cache path.
+            // Seed only the genuine official server binary already downloaded
+            // by Loom; downloads are not part of the bounded startup assertion.
+            def cached = new File(gradle.gradleUserHomeDir,"caches/fabric-loom/${mc}/minecraft-server.jar")
+            def metadata = new groovy.json.JsonSlurper().parse(new File(cached.parentFile,'mojang_minecraft_info.json'))
+            def expected = metadata.downloads.server.sha1
+            def sha1 = { File input ->
+                def digest=java.security.MessageDigest.getInstance('SHA-1')
+                input.withInputStream { stream ->
+                    byte[] buffer=new byte[65536];int read
+                    while((read=stream.read(buffer))!=-1)digest.update(buffer,0,read)
+                }
+                digest.digest().encodeHex().toString()
+            }
+            if(sha1(cached)!=expected)throw new GradleException('Official cached Minecraft server SHA-1 mismatch: '+mc)
+            def installed=new File(dir,".fabric/server/${mc}-server.jar")
+            if(installed.exists() && sha1(installed)!=expected)throw new GradleException('Invalid production server input retained for investigation: '+installed)
+            if(!installed.exists()) { installed.parentFile.mkdirs();java.nio.file.Files.copy(cached.toPath(),installed.toPath()) }
+            logger.lifecycle('[PHASE5-INPUT] official Minecraft server {} SHA-1 {}',mc,expected)
+        }
+        new File(dir, 'eula.txt').text = 'eula=true\n'
+        new File(dir, 'server.properties').text = """online-mode=false
+server-ip=127.0.0.1
+server-port=${findProperty('phase5_port') ?: (phase3 ? (legacy ? 28414 : 28633) : (legacy ? 27414 : 27633))}
+level-name=${fixtureWorld}
+level-type=minecraft:flat
+generate-structures=false
+view-distance=2
+simulation-distance=2
+spawn-protection=0
+max-players=2
+enforce-secure-profile=false
+white-list=false
+enforce-whitelist=false
+pause-when-empty-seconds=0
+motd=FunTimeEvents Phase2 local fixture
+"""
+        new File(dir, 'phase2.stop').delete()
+        if (phase3) {
+            new File(dir, 'phase3.stop').delete()
+            def pack = new File(dir, "${fixtureWorld}/datapacks/phase3")
+            pack.mkdirs()
+            new File(pack, 'pack.mcmeta').text = groovy.json.JsonOutput.toJson([pack:
+                spec.split_pack_format ? [min_format:[spec.data_pack,spec.data_pack_minor],max_format:[spec.data_pack,spec.data_pack_minor],description:'Phase3 local dimensions'] :
+                         [pack_format:spec.data_pack, description:'Phase3 local dimensions']])
+            def dimensions = new File(pack, 'data/minecraft/dimension')
+            dimensions.mkdirs()
+            def dimension = [type:'minecraft:overworld', generator:[type:'minecraft:flat',settings:[
+                biome:'minecraft:plains',features:false,lakes:false,
+                layers:[[block:'minecraft:bedrock',height:1]],structure_overrides:[]]]]
+            ['lobby', 'nether-event'].each { name ->
+                new File(dimensions, name + '.json').text = groovy.json.JsonOutput.toJson(dimension)
+            }
+        }
+    }
+}
+tasks.named('jar', Jar) {
+    from(project(':core').sourceSets.main.output)
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+}
+tasks.named('sourcesJar', Jar) {
+    from(project(':core').sourceSets.main.allSource)
+}
+tasks.named('processResources') {
+    inputs.properties(version: project.version, minecraft: mc, java: language)
+    from(rootProject.file('platform/common/src/main/resources')) {
+        expand(version: project.version, minecraft: mc, java: language)
+    }
+}
+publishing {
+    repositories {
+        maven { name='Phase5'; url=uri(findProperty('phase5_repository') ?: rootProject.layout.buildDirectory.dir('phase5-maven').get().asFile) }
+    }
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = project.name
+            from components.java
+            pom {
+                name = "FunTimeEvents isolated PoC ${mc}"
+                description = 'Experimental artifact; not a production SDK release'
+            }
+        }
+    }
+}
+
+// Plain transport verification; no Minecraft launch, mixin or platform stubs.
+def networkVerification = sourceSets.create('networkVerification') {
+    java.srcDir(rootProject.file('verification/network/src/main/java'))
+    resources.srcDir(rootProject.file('fixtures/data'))
+    compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath + project(':core').sourceSets.main.output
+    runtimeClasspath += sourceSets.main.output + sourceSets.main.compileClasspath + project(':core').sourceSets.main.output
+}
+['verifyNetworkParity', 'verifyLegacyNetwork'].each { name ->
+    tasks.register(name, JavaExec) {
+        dependsOn tasks.named(networkVerification.classesTaskName)
+        classpath = networkVerification.runtimeClasspath
+        if(name == 'verifyLegacyNetwork') classpath = files(rootProject.file('fixtures/binary-compat/legacy-sdk.jar')) + classpath
+        if(name == 'verifyNetworkParity' && findProperty('network_frozen_version')) {
+            def v=findProperty('network_frozen_version')
+            classpath=files(rootProject.file("results/phase4/artifacts/${v}/${project.name}/${project.name}-${v}.jar"))+classpath
+        }
+        mainClass = 'net.funtimeevents.net.NetworkParityCheck'
+        javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(language) }
+        args (findProperty('phase4_backend') ?: 'https://127.0.0.1:29841'), (name == 'verifyLegacyNetwork' ? 'legacy' : "ported-${mc}")
+        jvmArgs "-Djavax.net.ssl.trustStore=${rootProject.file('.evidence/phase4-tls/trust-full.p12').absolutePath}", '-Djavax.net.ssl.trustStorePassword=phase4-test'
+    }
+}
+tasks.register('verifyPublicConfig',JavaExec) {
+    dependsOn tasks.named(networkVerification.classesTaskName)
+    classpath=networkVerification.runtimeClasspath
+    mainClass='net.funtimeevents.api.PublicConfigCheck'
+    javaLauncher=javaToolchains.launcherFor { languageVersion=JavaLanguageVersion.of(language) }
+}
+tasks.register('verifySendFutureAccounting',JavaExec) {
+    dependsOn tasks.named(networkVerification.classesTaskName)
+    classpath=networkVerification.runtimeClasspath
+    mainClass='net.funtimeevents.net.SendFutureAccountingCheck'
+    javaLauncher=javaToolchains.launcherFor { languageVersion=JavaLanguageVersion.of(language) }
+}
+['verifyNetworkFaults','verifyLegacyFaults'].each { name ->
+    tasks.register(name,JavaExec) {
+        dependsOn tasks.named(networkVerification.classesTaskName)
+        classpath=networkVerification.runtimeClasspath
+        if(name=='verifyLegacyFaults')classpath=files(rootProject.file('fixtures/binary-compat/legacy-sdk.jar'))+classpath
+        if(name=='verifyNetworkFaults' && findProperty('network_frozen_version')) {
+            def v=findProperty('network_frozen_version')
+            classpath=files(rootProject.file("results/phase4/artifacts/${v}/${project.name}/${project.name}-${v}.jar"))+classpath
+        }
+        mainClass='net.funtimeevents.net.NetworkFaultProbe'
+        javaLauncher=javaToolchains.launcherFor { languageVersion=JavaLanguageVersion.of(language) }
+        args (findProperty('phase4_backend')?:'https://127.0.0.1:29941'),(name=='verifyLegacyFaults'?'legacy':"ported-${mc}"),
+            (findProperty('phase4_fault_output')?:layout.buildDirectory.file('network-faults.json').get().asFile.absolutePath)
+        jvmArgs "-Djavax.net.ssl.trustStore=${rootProject.file('.evidence/phase4-tls/trust-full.p12').absolutePath}",'-Djavax.net.ssl.trustStorePassword=phase4-test'
+    }
+}
+tasks.register('verifyLateCallback',JavaExec) {
+    dependsOn tasks.named(networkVerification.classesTaskName)
+    classpath=networkVerification.runtimeClasspath
+    mainClass='net.funtimeevents.net.LateCallbackProbe'
+    if(findProperty('network_frozen_version')) {
+        def v=findProperty('network_frozen_version')
+        classpath=files(rootProject.file("results/phase4/artifacts/${v}/${project.name}/${project.name}-${v}.jar"))+classpath
+    }
+    javaLauncher=javaToolchains.launcherFor { languageVersion=JavaLanguageVersion.of(language) }
+    args (findProperty('phase4_backend')?:'https://127.0.0.1:29941'),layout.buildDirectory.file('late-callback.json').get().asFile.absolutePath
+    jvmArgs "-Djavax.net.ssl.trustStore=${rootProject.file('.evidence/phase4-tls/trust-full.p12').absolutePath}",'-Djavax.net.ssl.trustStorePassword=phase4-test'
+}
+tasks.register('verifyNetworkHardening',JavaExec) {
+    dependsOn tasks.named(networkVerification.classesTaskName)
+    classpath=networkVerification.runtimeClasspath
+    mainClass='net.funtimeevents.net.NetworkHardeningCheck'
+    javaLauncher=javaToolchains.launcherFor { languageVersion=JavaLanguageVersion.of(language) }
+    args (findProperty('phase4_backend')?:'https://127.0.0.1:29841'),layout.buildDirectory.file('network-hardening.json').get().asFile.absolutePath
+    jvmArgs "-Djavax.net.ssl.trustStore=${rootProject.file('.evidence/phase4-tls/trust-full.p12').absolutePath}",'-Djavax.net.ssl.trustStorePassword=phase4-test'
+}

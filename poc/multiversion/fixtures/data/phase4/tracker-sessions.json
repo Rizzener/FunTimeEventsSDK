@@ -1,0 +1,1916 @@
+[
+  {
+    "name": "copper",
+    "host": "fixture.funtime.su",
+    "server_id": 401,
+    "dimension": "minecraft:overworld",
+    "pos": [
+      2092,
+      -50,
+      2006
+    ],
+    "wait_ticks": 220,
+    "npcs": [
+      {
+        "name": "Good",
+        "uuid": "fd54b765-cb9f-5f86-8bfe-086342c4568c",
+        "donate": "⚡VIP",
+        "pos": [
+          2099,
+          -50,
+          2001
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "diamond_helmet",
+          "netherite_chestplate",
+          "none",
+          "leather_boots"
+        ]
+      },
+      {
+        "name": "NoPrefix",
+        "uuid": "7b674ddf-a85c-5864-9396-06d28fd862b2",
+        "donate": "VIP",
+        "pos": [
+          2098,
+          -50,
+          2000
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      {
+        "name": "Outside",
+        "uuid": "b3a1ad7b-0f73-5988-983b-255d54074802",
+        "donate": "⚡ELITE",
+        "pos": [
+          2101,
+          -50,
+          2000
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      {
+        "name": "High",
+        "uuid": "8da1c9ba-fb32-56df-a716-95e33adc93d4",
+        "donate": "⚡Y",
+        "pos": [
+          2098,
+          6,
+          2000
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      {
+        "name": "TabOnly",
+        "uuid": "ea18c876-0567-5441-b336-1bae29debfbb",
+        "donate": "⚡TAB",
+        "pos": [
+          2098,
+          -50,
+          2000
+        ],
+        "entity": false,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      }
+    ],
+    "chests": [
+      {
+        "type": "chest",
+        "pos": [
+          2098,
+          -53,
+          2000
+        ],
+        "timer": "01:23"
+      },
+      {
+        "type": "barrel",
+        "pos": [
+          2099,
+          -52,
+          2000
+        ],
+        "timer": "2:05"
+      },
+      {
+        "type": "trapped_chest",
+        "pos": [
+          2100,
+          -51,
+          2000
+        ],
+        "timer": "0:59"
+      },
+      {
+        "type": "chest",
+        "pos": [
+          2097,
+          -51,
+          2000
+        ],
+        "timer": "1:2"
+      },
+      {
+        "type": "chest",
+        "pos": [
+          2101,
+          -51,
+          2000
+        ],
+        "timer": "01:00"
+      }
+    ],
+    "decoys": 200,
+    "messages": [
+      {
+        "id": "ban-root",
+        "channel": "GAME",
+        "text": "[♨] RootBan забанен [Подробнее]",
+        "hover": "Причина: Читы\nДо: 2027-01-01 12:00\nСервер: Анархия-77",
+        "placement": "root"
+      },
+      {
+        "id": "ban-sibling",
+        "channel": "GAME",
+        "text": "[♨] SiblingBan забанен [Подробнее]",
+        "hover": "Причина: Флуд\nНаказание: 7 дней",
+        "placement": "sibling"
+      },
+      {
+        "id": "ban-chat",
+        "channel": "CHAT",
+        "text": "[♨] ChatBan забанен [Подробнее]"
+      },
+      {
+        "id": "event-valid",
+        "channel": "GAME",
+        "text": "||| [Мистический сундук] |||\nУровень лута: Эпический\nПоявился на координатах [-123 64 456]"
+      },
+      {
+        "id": "event-chat-ignored",
+        "channel": "CHAT",
+        "text": "||| [CHAT-only сундук] |||\nУровень лута: Эпический\nПоявился на координатах [-123 64 456]"
+      },
+      {
+        "id": "event-no-level",
+        "channel": "GAME",
+        "text": "||| [Нет уровня] |||\nПоявился на координатах 1 2 3"
+      },
+      {
+        "id": "event-overflow",
+        "channel": "GAME",
+        "text": "||| [Overflow] |||\nУровень лута: Редкий\nПоявился на координатах 999999999999 2 3"
+      },
+      {
+        "id": "ordinary",
+        "channel": "GAME",
+        "text": "Обычное сообщение"
+      }
+    ],
+    "expected": {
+      "tab": [
+        {
+          "server_id": 401,
+          "server_type": "anarchy",
+          "players_list": [
+            {
+              "player_name": "Good",
+              "donate": "⚡VIP",
+              "active": "<ISO8601>"
+            },
+            {
+              "player_name": "Outside",
+              "donate": "⚡ELITE",
+              "active": "<ISO8601>"
+            },
+            {
+              "player_name": "High",
+              "donate": "⚡Y",
+              "active": "<ISO8601>"
+            },
+            {
+              "player_name": "TabOnly",
+              "donate": "⚡TAB",
+              "active": "<ISO8601>"
+            }
+          ]
+        }
+      ],
+      "ban": [
+        {
+          "server_id": 77,
+          "server_type": "anarchy",
+          "player_name": "RootBan",
+          "reason": "Читы",
+          "end": "2027-01-01 12:00"
+        },
+        {
+          "server_id": 401,
+          "server_type": "anarchy",
+          "player_name": "SiblingBan",
+          "reason": "Флуд",
+          "end": "7 дней"
+        },
+        {
+          "server_id": 401,
+          "server_type": "anarchy",
+          "player_name": "ChatBan",
+          "reason": "",
+          "end": "Навсегда"
+        }
+      ],
+      "copper": [
+        {
+          "server_id": 401,
+          "server_type": "anarchy",
+          "players": [
+            {
+              "player_name": "Good",
+              "donate": "⚡VIP",
+              "helmet": "diamond_helmet",
+              "chestplate": "netherite_chestplate",
+              "leggings": "none",
+              "boots": "leather_boots",
+              "is_invisible": false
+            }
+          ],
+          "chests": [
+            {
+              "x": 2098,
+              "y": -53,
+              "z": 2000,
+              "time_left": 83
+            },
+            {
+              "x": 2099,
+              "y": -52,
+              "z": 2000,
+              "time_left": 125
+            },
+            {
+              "x": 2100,
+              "y": -51,
+              "z": 2000,
+              "time_left": 59
+            }
+          ]
+        }
+      ],
+      "warden": [],
+      "hell": [],
+      "mine": [],
+      "coordinates": [
+        {
+          "server_id": 401,
+          "server_type": "anarchy",
+          "event": "Мистический сундук",
+          "level": "Эпический",
+          "coordinates": {
+            "x": -123,
+            "y": 64,
+            "z": 456
+          }
+        }
+      ]
+    },
+    "extra_text_displays": 16,
+    "fixture_revision": 4
+  },
+  {
+    "name": "outside-copper",
+    "host": "fixture.funtime.su",
+    "server_id": 402,
+    "dimension": "minecraft:overworld",
+    "pos": [
+      2101,
+      -50,
+      2000
+    ],
+    "wait_ticks": 220,
+    "npcs": [
+      {
+        "name": "Good",
+        "uuid": "fd54b765-cb9f-5f86-8bfe-086342c4568c",
+        "donate": "⚡SECOND",
+        "pos": [
+          2099,
+          -50,
+          2001
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "diamond_helmet",
+          "netherite_chestplate",
+          "none",
+          "leather_boots"
+        ]
+      },
+      {
+        "name": "NoPrefix",
+        "uuid": "7b674ddf-a85c-5864-9396-06d28fd862b2",
+        "donate": "VIP",
+        "pos": [
+          2098,
+          -50,
+          2000
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      {
+        "name": "Outside",
+        "uuid": "b3a1ad7b-0f73-5988-983b-255d54074802",
+        "donate": "⚡ELITE",
+        "pos": [
+          2101,
+          -50,
+          2000
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      {
+        "name": "High",
+        "uuid": "8da1c9ba-fb32-56df-a716-95e33adc93d4",
+        "donate": "⚡Y",
+        "pos": [
+          2098,
+          6,
+          2000
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      {
+        "name": "TabOnly",
+        "uuid": "ea18c876-0567-5441-b336-1bae29debfbb",
+        "donate": "⚡TAB",
+        "pos": [
+          2098,
+          -50,
+          2000
+        ],
+        "entity": false,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      }
+    ],
+    "chests": [
+      {
+        "type": "chest",
+        "pos": [
+          2098,
+          -53,
+          2000
+        ],
+        "timer": "01:23"
+      },
+      {
+        "type": "barrel",
+        "pos": [
+          2099,
+          -52,
+          2000
+        ],
+        "timer": "2:05"
+      },
+      {
+        "type": "trapped_chest",
+        "pos": [
+          2100,
+          -51,
+          2000
+        ],
+        "timer": "0:59"
+      },
+      {
+        "type": "chest",
+        "pos": [
+          2097,
+          -51,
+          2000
+        ],
+        "timer": "1:2"
+      },
+      {
+        "type": "chest",
+        "pos": [
+          2101,
+          -51,
+          2000
+        ],
+        "timer": "01:00"
+      }
+    ],
+    "decoys": 200,
+    "messages": [
+      {
+        "id": "ban-root",
+        "channel": "GAME",
+        "text": "[♨] RootBan забанен [Подробнее]",
+        "hover": "Причина: Читы\nДо: 2027-01-01 12:00\nСервер: Анархия-77",
+        "placement": "root"
+      },
+      {
+        "id": "ban-sibling",
+        "channel": "GAME",
+        "text": "[♨] SiblingBan забанен [Подробнее]",
+        "hover": "Причина: Флуд\nНаказание: 7 дней",
+        "placement": "sibling"
+      },
+      {
+        "id": "ban-chat",
+        "channel": "CHAT",
+        "text": "[♨] ChatBan забанен [Подробнее]"
+      },
+      {
+        "id": "event-valid",
+        "channel": "GAME",
+        "text": "||| [Мистический сундук] |||\nУровень лута: Эпический\nПоявился на координатах [-123 64 456]"
+      },
+      {
+        "id": "event-chat-ignored",
+        "channel": "CHAT",
+        "text": "||| [CHAT-only сундук] |||\nУровень лута: Эпический\nПоявился на координатах [-123 64 456]"
+      },
+      {
+        "id": "event-no-level",
+        "channel": "GAME",
+        "text": "||| [Нет уровня] |||\nПоявился на координатах 1 2 3"
+      },
+      {
+        "id": "event-overflow",
+        "channel": "GAME",
+        "text": "||| [Overflow] |||\nУровень лута: Редкий\nПоявился на координатах 999999999999 2 3"
+      },
+      {
+        "id": "ordinary",
+        "channel": "GAME",
+        "text": "Обычное сообщение"
+      }
+    ],
+    "expected": {
+      "tab": [
+        {
+          "server_id": 402,
+          "server_type": "anarchy",
+          "players_list": [
+            {
+              "player_name": "Good",
+              "donate": "⚡SECOND",
+              "active": "<ISO8601>"
+            },
+            {
+              "player_name": "Outside",
+              "donate": "⚡ELITE",
+              "active": "<ISO8601>"
+            },
+            {
+              "player_name": "High",
+              "donate": "⚡Y",
+              "active": "<ISO8601>"
+            },
+            {
+              "player_name": "TabOnly",
+              "donate": "⚡TAB",
+              "active": "<ISO8601>"
+            }
+          ]
+        }
+      ],
+      "ban": [
+        {
+          "server_id": 77,
+          "server_type": "anarchy",
+          "player_name": "RootBan",
+          "reason": "Читы",
+          "end": "2027-01-01 12:00"
+        },
+        {
+          "server_id": 402,
+          "server_type": "anarchy",
+          "player_name": "SiblingBan",
+          "reason": "Флуд",
+          "end": "7 дней"
+        },
+        {
+          "server_id": 402,
+          "server_type": "anarchy",
+          "player_name": "ChatBan",
+          "reason": "",
+          "end": "Навсегда"
+        }
+      ],
+      "copper": [],
+      "warden": [],
+      "hell": [],
+      "mine": [],
+      "coordinates": [
+        {
+          "server_id": 402,
+          "server_type": "anarchy",
+          "event": "Мистический сундук",
+          "level": "Эпический",
+          "coordinates": {
+            "x": -123,
+            "y": 64,
+            "z": 456
+          }
+        }
+      ]
+    },
+    "extra_text_displays": 16,
+    "fixture_revision": 4
+  },
+  {
+    "name": "warden",
+    "host": "fixture.funtime.su",
+    "server_id": 403,
+    "dimension": "minecraft:overworld",
+    "pos": [
+      -2008,
+      -50,
+      -1994
+    ],
+    "wait_ticks": 220,
+    "npcs": [
+      {
+        "name": "Good",
+        "uuid": "fd54b765-cb9f-5f86-8bfe-086342c4568c",
+        "donate": "⚡MVP",
+        "pos": [
+          -1997,
+          -50,
+          -1999
+        ],
+        "entity": true,
+        "invisible": true,
+        "gear": [
+          "diamond_helmet",
+          "netherite_chestplate",
+          "none",
+          "leather_boots"
+        ]
+      },
+      {
+        "name": "NoPrefix",
+        "uuid": "7b674ddf-a85c-5864-9396-06d28fd862b2",
+        "donate": "VIP",
+        "pos": [
+          -1998,
+          -50,
+          -2000
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      {
+        "name": "Outside",
+        "uuid": "b3a1ad7b-0f73-5988-983b-255d54074802",
+        "donate": "⚡ELITE",
+        "pos": [
+          -1899,
+          -50,
+          -2000
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      {
+        "name": "High",
+        "uuid": "8da1c9ba-fb32-56df-a716-95e33adc93d4",
+        "donate": "⚡Y",
+        "pos": [
+          -1998,
+          6,
+          -2000
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      {
+        "name": "TabOnly",
+        "uuid": "ea18c876-0567-5441-b336-1bae29debfbb",
+        "donate": "⚡TAB",
+        "pos": [
+          -1998,
+          -50,
+          -2000
+        ],
+        "entity": false,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      }
+    ],
+    "chests": [
+      {
+        "type": "chest",
+        "pos": [
+          -1998,
+          -53,
+          -2000
+        ],
+        "timer": "01:23"
+      },
+      {
+        "type": "barrel",
+        "pos": [
+          -1997,
+          -52,
+          -2000
+        ],
+        "timer": "2:05"
+      },
+      {
+        "type": "trapped_chest",
+        "pos": [
+          -1996,
+          -51,
+          -2000
+        ],
+        "timer": "0:59"
+      },
+      {
+        "type": "chest",
+        "pos": [
+          -1999,
+          -51,
+          -2000
+        ],
+        "timer": "1:2"
+      },
+      {
+        "type": "chest",
+        "pos": [
+          -1899,
+          -51,
+          -2000
+        ],
+        "timer": "01:00"
+      }
+    ],
+    "decoys": 200,
+    "messages": [
+      {
+        "id": "ban-root",
+        "channel": "GAME",
+        "text": "[♨] RootBan забанен [Подробнее]",
+        "hover": "Причина: Читы\nДо: 2027-01-01 12:00\nСервер: Анархия-77",
+        "placement": "root"
+      },
+      {
+        "id": "ban-sibling",
+        "channel": "GAME",
+        "text": "[♨] SiblingBan забанен [Подробнее]",
+        "hover": "Причина: Флуд\nНаказание: 7 дней",
+        "placement": "sibling"
+      },
+      {
+        "id": "ban-chat",
+        "channel": "CHAT",
+        "text": "[♨] ChatBan забанен [Подробнее]"
+      },
+      {
+        "id": "event-valid",
+        "channel": "GAME",
+        "text": "||| [Мистический сундук] |||\nУровень лута: Эпический\nПоявился на координатах [-123 64 456]"
+      },
+      {
+        "id": "event-chat-ignored",
+        "channel": "CHAT",
+        "text": "||| [CHAT-only сундук] |||\nУровень лута: Эпический\nПоявился на координатах [-123 64 456]"
+      },
+      {
+        "id": "event-no-level",
+        "channel": "GAME",
+        "text": "||| [Нет уровня] |||\nПоявился на координатах 1 2 3"
+      },
+      {
+        "id": "event-overflow",
+        "channel": "GAME",
+        "text": "||| [Overflow] |||\nУровень лута: Редкий\nПоявился на координатах 999999999999 2 3"
+      },
+      {
+        "id": "ordinary",
+        "channel": "GAME",
+        "text": "Обычное сообщение"
+      }
+    ],
+    "expected": {
+      "tab": [
+        {
+          "server_id": 403,
+          "server_type": "anarchy",
+          "players_list": [
+            {
+              "player_name": "Good",
+              "donate": "⚡MVP",
+              "active": "<ISO8601>"
+            },
+            {
+              "player_name": "Outside",
+              "donate": "⚡ELITE",
+              "active": "<ISO8601>"
+            },
+            {
+              "player_name": "High",
+              "donate": "⚡Y",
+              "active": "<ISO8601>"
+            },
+            {
+              "player_name": "TabOnly",
+              "donate": "⚡TAB",
+              "active": "<ISO8601>"
+            }
+          ]
+        }
+      ],
+      "ban": [
+        {
+          "server_id": 77,
+          "server_type": "anarchy",
+          "player_name": "RootBan",
+          "reason": "Читы",
+          "end": "2027-01-01 12:00"
+        },
+        {
+          "server_id": 403,
+          "server_type": "anarchy",
+          "player_name": "SiblingBan",
+          "reason": "Флуд",
+          "end": "7 дней"
+        },
+        {
+          "server_id": 403,
+          "server_type": "anarchy",
+          "player_name": "ChatBan",
+          "reason": "",
+          "end": "Навсегда"
+        }
+      ],
+      "copper": [],
+      "warden": [
+        {
+          "server_id": 403,
+          "server_type": "anarchy",
+          "players": [
+            {
+              "player_name": "Good",
+              "donate": "⚡MVP",
+              "helmet": "diamond_helmet",
+              "chestplate": "netherite_chestplate",
+              "leggings": "none",
+              "boots": "leather_boots",
+              "is_invisible": true
+            }
+          ],
+          "chests": [
+            {
+              "x": -1998,
+              "y": -53,
+              "z": -2000,
+              "time_left": 83
+            },
+            {
+              "x": -1997,
+              "y": -52,
+              "z": -2000,
+              "time_left": 125
+            },
+            {
+              "x": -1996,
+              "y": -51,
+              "z": -2000,
+              "time_left": 59
+            }
+          ]
+        }
+      ],
+      "hell": [],
+      "mine": [],
+      "coordinates": [
+        {
+          "server_id": 403,
+          "server_type": "anarchy",
+          "event": "Мистический сундук",
+          "level": "Эпический",
+          "coordinates": {
+            "x": -123,
+            "y": 64,
+            "z": 456
+          }
+        }
+      ]
+    },
+    "extra_text_displays": 16,
+    "fixture_revision": 4
+  },
+  {
+    "name": "lobby",
+    "host": "fixture.funtime.su",
+    "server_id": 404,
+    "dimension": "minecraft:lobby",
+    "pos": [
+      -76,
+      10,
+      5
+    ],
+    "wait_ticks": 220,
+    "npcs": [
+      {
+        "name": "Near",
+        "uuid": "ccea0f03-a2b5-5d48-a4d6-c7cdd1cc971c",
+        "donate": "⚡NEAR",
+        "pos": [
+          -76,
+          10,
+          5
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      {
+        "name": "Boundary",
+        "uuid": "e66a20b1-a4e3-5d69-ab9e-913bed29050d",
+        "donate": "⚡BORDER",
+        "pos": [
+          -61,
+          200,
+          5
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      {
+        "name": "Far",
+        "uuid": "2e84de69-0e80-5929-b762-494ddf98fa37",
+        "donate": "⚡FAR",
+        "pos": [
+          -60,
+          10,
+          5
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      {
+        "name": "NoPrefix",
+        "uuid": "7b674ddf-a85c-5864-9396-06d28fd862b2",
+        "donate": "VIP",
+        "pos": [
+          -75,
+          10,
+          5
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      {
+        "name": "TabOnly",
+        "uuid": "ea18c876-0567-5441-b336-1bae29debfbb",
+        "donate": "⚡TAB",
+        "pos": [
+          -75,
+          10,
+          5
+        ],
+        "entity": false,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      }
+    ],
+    "chests": [],
+    "decoys": 0,
+    "messages": [],
+    "expected": {
+      "tab": [
+        {
+          "server_id": 404,
+          "server_type": "anarchy",
+          "players_list": [
+            {
+              "player_name": "Near",
+              "donate": "⚡NEAR",
+              "active": "<ISO8601>"
+            },
+            {
+              "player_name": "Boundary",
+              "donate": "⚡BORDER",
+              "active": "<ISO8601>"
+            },
+            {
+              "player_name": "Far",
+              "donate": "⚡FAR",
+              "active": "<ISO8601>"
+            },
+            {
+              "player_name": "TabOnly",
+              "donate": "⚡TAB",
+              "active": "<ISO8601>"
+            }
+          ]
+        }
+      ],
+      "ban": [],
+      "copper": [],
+      "warden": [],
+      "hell": [],
+      "mine": [
+        {
+          "server_id": 404,
+          "server_type": "anarchy",
+          "players_around": [
+            {
+              "player_name": "Near",
+              "donate": "⚡NEAR",
+              "active": "<ISO8601>"
+            },
+            {
+              "player_name": "Boundary",
+              "donate": "⚡BORDER",
+              "active": "<ISO8601>"
+            }
+          ]
+        }
+      ],
+      "coordinates": []
+    },
+    "fixture_revision": 4
+  },
+  {
+    "name": "lobby-outside",
+    "host": "fixture.funtime.su",
+    "server_id": 405,
+    "dimension": "minecraft:lobby",
+    "pos": [
+      -35,
+      10,
+      5
+    ],
+    "wait_ticks": 220,
+    "npcs": [
+      {
+        "name": "Near",
+        "uuid": "ccea0f03-a2b5-5d48-a4d6-c7cdd1cc971c",
+        "donate": "⚡NEAR",
+        "pos": [
+          -76,
+          10,
+          5
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      {
+        "name": "Boundary",
+        "uuid": "e66a20b1-a4e3-5d69-ab9e-913bed29050d",
+        "donate": "⚡BORDER",
+        "pos": [
+          -61,
+          200,
+          5
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      {
+        "name": "Far",
+        "uuid": "2e84de69-0e80-5929-b762-494ddf98fa37",
+        "donate": "⚡FAR",
+        "pos": [
+          -60,
+          10,
+          5
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      {
+        "name": "NoPrefix",
+        "uuid": "7b674ddf-a85c-5864-9396-06d28fd862b2",
+        "donate": "VIP",
+        "pos": [
+          -75,
+          10,
+          5
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      {
+        "name": "TabOnly",
+        "uuid": "ea18c876-0567-5441-b336-1bae29debfbb",
+        "donate": "⚡TAB",
+        "pos": [
+          -75,
+          10,
+          5
+        ],
+        "entity": false,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      }
+    ],
+    "chests": [],
+    "decoys": 0,
+    "messages": [],
+    "expected": {
+      "tab": [
+        {
+          "server_id": 405,
+          "server_type": "anarchy",
+          "players_list": [
+            {
+              "player_name": "Near",
+              "donate": "⚡NEAR",
+              "active": "<ISO8601>"
+            },
+            {
+              "player_name": "Boundary",
+              "donate": "⚡BORDER",
+              "active": "<ISO8601>"
+            },
+            {
+              "player_name": "Far",
+              "donate": "⚡FAR",
+              "active": "<ISO8601>"
+            },
+            {
+              "player_name": "TabOnly",
+              "donate": "⚡TAB",
+              "active": "<ISO8601>"
+            }
+          ]
+        }
+      ],
+      "ban": [],
+      "copper": [],
+      "warden": [],
+      "hell": [],
+      "mine": [],
+      "coordinates": []
+    },
+    "fixture_revision": 4
+  },
+  {
+    "name": "wrong-dimension",
+    "host": "fixture.funtime.su",
+    "server_id": 406,
+    "dimension": "minecraft:overworld",
+    "pos": [
+      -76,
+      10,
+      5
+    ],
+    "wait_ticks": 220,
+    "npcs": [
+      {
+        "name": "Near",
+        "uuid": "ccea0f03-a2b5-5d48-a4d6-c7cdd1cc971c",
+        "donate": "⚡OTHER",
+        "pos": [
+          -76,
+          10,
+          5
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      }
+    ],
+    "chests": [],
+    "decoys": 0,
+    "messages": [],
+    "expected": {
+      "tab": [
+        {
+          "server_id": 406,
+          "server_type": "anarchy",
+          "players_list": [
+            {
+              "player_name": "Near",
+              "donate": "⚡OTHER",
+              "active": "<ISO8601>"
+            }
+          ]
+        }
+      ],
+      "ban": [],
+      "copper": [],
+      "warden": [],
+      "hell": [],
+      "mine": [],
+      "coordinates": []
+    },
+    "boss": true,
+    "fixture_revision": 4
+  },
+  {
+    "name": "hell",
+    "host": "fixture.funtime.su",
+    "server_id": 407,
+    "dimension": "minecraft:nether-event",
+    "pos": [
+      0,
+      10,
+      0
+    ],
+    "wait_ticks": 320,
+    "npcs": [],
+    "chests": [],
+    "decoys": 0,
+    "messages": [],
+    "expected": {
+      "tab": [],
+      "ban": [],
+      "copper": [],
+      "warden": [],
+      "hell": [
+        {
+          "server_id": 407,
+          "server_type": "anarchy",
+          "mobs_count": 17
+        },
+        {
+          "server_id": 407,
+          "server_type": "anarchy",
+          "mobs_count": 9
+        }
+      ],
+      "mine": [],
+      "coordinates": []
+    },
+    "boss": true,
+    "fixture_revision": 4
+  },
+  {
+    "name": "non-funtime",
+    "host": "example.invalid",
+    "server_id": 408,
+    "dimension": "minecraft:overworld",
+    "pos": [
+      2098,
+      -50,
+      2000
+    ],
+    "wait_ticks": 220,
+    "npcs": [
+      {
+        "name": "Good",
+        "uuid": "fd54b765-cb9f-5f86-8bfe-086342c4568c",
+        "donate": "⚡NEGATIVE",
+        "pos": [
+          2099,
+          -50,
+          2001
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "diamond_helmet",
+          "netherite_chestplate",
+          "none",
+          "leather_boots"
+        ]
+      },
+      {
+        "name": "NoPrefix",
+        "uuid": "7b674ddf-a85c-5864-9396-06d28fd862b2",
+        "donate": "VIP",
+        "pos": [
+          2098,
+          -50,
+          2000
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      {
+        "name": "Outside",
+        "uuid": "b3a1ad7b-0f73-5988-983b-255d54074802",
+        "donate": "⚡ELITE",
+        "pos": [
+          2101,
+          -50,
+          2000
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      {
+        "name": "High",
+        "uuid": "8da1c9ba-fb32-56df-a716-95e33adc93d4",
+        "donate": "⚡Y",
+        "pos": [
+          2098,
+          6,
+          2000
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      },
+      {
+        "name": "TabOnly",
+        "uuid": "ea18c876-0567-5441-b336-1bae29debfbb",
+        "donate": "⚡TAB",
+        "pos": [
+          2098,
+          -50,
+          2000
+        ],
+        "entity": false,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      }
+    ],
+    "chests": [
+      {
+        "type": "chest",
+        "pos": [
+          2098,
+          -53,
+          2000
+        ],
+        "timer": "01:23"
+      },
+      {
+        "type": "barrel",
+        "pos": [
+          2099,
+          -52,
+          2000
+        ],
+        "timer": "2:05"
+      },
+      {
+        "type": "trapped_chest",
+        "pos": [
+          2100,
+          -51,
+          2000
+        ],
+        "timer": "0:59"
+      },
+      {
+        "type": "chest",
+        "pos": [
+          2097,
+          -51,
+          2000
+        ],
+        "timer": "1:2"
+      },
+      {
+        "type": "chest",
+        "pos": [
+          2101,
+          -51,
+          2000
+        ],
+        "timer": "01:00"
+      }
+    ],
+    "decoys": 200,
+    "messages": [
+      {
+        "id": "ban-root",
+        "channel": "GAME",
+        "text": "[♨] RootBan забанен [Подробнее]",
+        "hover": "Причина: Читы\nДо: 2027-01-01 12:00\nСервер: Анархия-77",
+        "placement": "root"
+      },
+      {
+        "id": "ban-sibling",
+        "channel": "GAME",
+        "text": "[♨] SiblingBan забанен [Подробнее]",
+        "hover": "Причина: Флуд\nНаказание: 7 дней",
+        "placement": "sibling"
+      },
+      {
+        "id": "ban-chat",
+        "channel": "CHAT",
+        "text": "[♨] ChatBan забанен [Подробнее]"
+      },
+      {
+        "id": "event-valid",
+        "channel": "GAME",
+        "text": "||| [Мистический сундук] |||\nУровень лута: Эпический\nПоявился на координатах [-123 64 456]"
+      },
+      {
+        "id": "event-chat-ignored",
+        "channel": "CHAT",
+        "text": "||| [CHAT-only сундук] |||\nУровень лута: Эпический\nПоявился на координатах [-123 64 456]"
+      },
+      {
+        "id": "event-no-level",
+        "channel": "GAME",
+        "text": "||| [Нет уровня] |||\nПоявился на координатах 1 2 3"
+      },
+      {
+        "id": "event-overflow",
+        "channel": "GAME",
+        "text": "||| [Overflow] |||\nУровень лута: Редкий\nПоявился на координатах 999999999999 2 3"
+      },
+      {
+        "id": "ordinary",
+        "channel": "GAME",
+        "text": "Обычное сообщение"
+      }
+    ],
+    "expected": {
+      "tab": [],
+      "ban": [],
+      "copper": [],
+      "warden": [],
+      "hell": [],
+      "mine": [],
+      "coordinates": []
+    },
+    "extra_text_displays": 16,
+    "fixture_revision": 4
+  },
+  {
+    "name": "unresolved",
+    "host": "fixture.funtime.su",
+    "server_id": -1,
+    "dimension": "minecraft:overworld",
+    "pos": [
+      0,
+      10,
+      0
+    ],
+    "wait_ticks": 220,
+    "npcs": [
+      {
+        "name": "Good",
+        "uuid": "fd54b765-cb9f-5f86-8bfe-086342c4568c",
+        "donate": "⚡UNRESOLVED",
+        "pos": [
+          0,
+          10,
+          0
+        ],
+        "entity": true,
+        "invisible": false,
+        "gear": [
+          "none",
+          "none",
+          "none",
+          "none"
+        ]
+      }
+    ],
+    "chests": [],
+    "decoys": 0,
+    "messages": [
+      {
+        "id": "ban-root",
+        "channel": "GAME",
+        "text": "[♨] RootBan забанен [Подробнее]",
+        "hover": "Причина: Читы\nДо: 2027-01-01 12:00\nСервер: Анархия-77",
+        "placement": "root"
+      },
+      {
+        "id": "ban-sibling",
+        "channel": "GAME",
+        "text": "[♨] SiblingBan забанен [Подробнее]",
+        "hover": "Причина: Флуд\nНаказание: 7 дней",
+        "placement": "sibling"
+      },
+      {
+        "id": "ban-chat",
+        "channel": "CHAT",
+        "text": "[♨] ChatBan забанен [Подробнее]"
+      },
+      {
+        "id": "event-valid",
+        "channel": "GAME",
+        "text": "||| [Мистический сундук] |||\nУровень лута: Эпический\nПоявился на координатах [-123 64 456]"
+      },
+      {
+        "id": "event-chat-ignored",
+        "channel": "CHAT",
+        "text": "||| [CHAT-only сундук] |||\nУровень лута: Эпический\nПоявился на координатах [-123 64 456]"
+      },
+      {
+        "id": "event-no-level",
+        "channel": "GAME",
+        "text": "||| [Нет уровня] |||\nПоявился на координатах 1 2 3"
+      },
+      {
+        "id": "event-overflow",
+        "channel": "GAME",
+        "text": "||| [Overflow] |||\nУровень лута: Редкий\nПоявился на координатах 999999999999 2 3"
+      },
+      {
+        "id": "ordinary",
+        "channel": "GAME",
+        "text": "Обычное сообщение"
+      }
+    ],
+    "expected": {
+      "tab": [
+        {
+          "server_id": -1,
+          "server_type": "anarchy",
+          "players_list": [
+            {
+              "player_name": "Good",
+              "donate": "⚡UNRESOLVED",
+              "active": "<ISO8601>"
+            }
+          ]
+        }
+      ],
+      "ban": [
+        {
+          "server_id": 77,
+          "server_type": "anarchy",
+          "player_name": "RootBan",
+          "reason": "Читы",
+          "end": "2027-01-01 12:00"
+        }
+      ],
+      "copper": [],
+      "warden": [],
+      "hell": [],
+      "mine": [],
+      "coordinates": []
+    },
+    "fixture_revision": 4
+  },
+  {
+    "name": "rapid-1",
+    "host": "fixture.funtime.su",
+    "server_id": 500,
+    "dimension": "minecraft:overworld",
+    "pos": [
+      0,
+      10,
+      0
+    ],
+    "wait_ticks": 4,
+    "npcs": [],
+    "chests": [],
+    "decoys": 0,
+    "messages": [],
+    "expected": {
+      "tab": [],
+      "ban": [],
+      "copper": [],
+      "warden": [],
+      "hell": [],
+      "mine": [],
+      "coordinates": []
+    },
+    "fixture_revision": 4
+  },
+  {
+    "name": "rapid-2",
+    "host": "fixture.funtime.su",
+    "server_id": 501,
+    "dimension": "minecraft:overworld",
+    "pos": [
+      0,
+      10,
+      0
+    ],
+    "wait_ticks": 4,
+    "npcs": [],
+    "chests": [],
+    "decoys": 0,
+    "messages": [],
+    "expected": {
+      "tab": [],
+      "ban": [],
+      "copper": [],
+      "warden": [],
+      "hell": [],
+      "mine": [],
+      "coordinates": []
+    },
+    "fixture_revision": 4
+  },
+  {
+    "name": "rapid-3",
+    "host": "fixture.funtime.su",
+    "server_id": 502,
+    "dimension": "minecraft:overworld",
+    "pos": [
+      0,
+      10,
+      0
+    ],
+    "wait_ticks": 4,
+    "npcs": [],
+    "chests": [],
+    "decoys": 0,
+    "messages": [],
+    "expected": {
+      "tab": [],
+      "ban": [],
+      "copper": [],
+      "warden": [],
+      "hell": [],
+      "mine": [],
+      "coordinates": []
+    },
+    "fixture_revision": 4
+  },
+  {
+    "name": "rapid-4",
+    "host": "fixture.funtime.su",
+    "server_id": 503,
+    "dimension": "minecraft:overworld",
+    "pos": [
+      0,
+      10,
+      0
+    ],
+    "wait_ticks": 4,
+    "npcs": [],
+    "chests": [],
+    "decoys": 0,
+    "messages": [],
+    "expected": {
+      "tab": [],
+      "ban": [],
+      "copper": [],
+      "warden": [],
+      "hell": [],
+      "mine": [],
+      "coordinates": []
+    },
+    "fixture_revision": 4
+  },
+  {
+    "name": "rapid-5",
+    "host": "fixture.funtime.su",
+    "server_id": 504,
+    "dimension": "minecraft:overworld",
+    "pos": [
+      0,
+      10,
+      0
+    ],
+    "wait_ticks": 4,
+    "npcs": [],
+    "chests": [],
+    "decoys": 0,
+    "messages": [],
+    "expected": {
+      "tab": [],
+      "ban": [],
+      "copper": [],
+      "warden": [],
+      "hell": [],
+      "mine": [],
+      "coordinates": []
+    },
+    "fixture_revision": 4
+  },
+  {
+    "name": "rapid-6",
+    "host": "fixture.funtime.su",
+    "server_id": 505,
+    "dimension": "minecraft:overworld",
+    "pos": [
+      0,
+      10,
+      0
+    ],
+    "wait_ticks": 4,
+    "npcs": [],
+    "chests": [],
+    "decoys": 0,
+    "messages": [],
+    "expected": {
+      "tab": [],
+      "ban": [],
+      "copper": [],
+      "warden": [],
+      "hell": [],
+      "mine": [],
+      "coordinates": []
+    },
+    "fixture_revision": 4
+  },
+  {
+    "name": "rapid-7",
+    "host": "fixture.funtime.su",
+    "server_id": 506,
+    "dimension": "minecraft:overworld",
+    "pos": [
+      0,
+      10,
+      0
+    ],
+    "wait_ticks": 4,
+    "npcs": [],
+    "chests": [],
+    "decoys": 0,
+    "messages": [],
+    "expected": {
+      "tab": [],
+      "ban": [],
+      "copper": [],
+      "warden": [],
+      "hell": [],
+      "mine": [],
+      "coordinates": []
+    },
+    "fixture_revision": 4
+  },
+  {
+    "name": "rapid-8",
+    "host": "fixture.funtime.su",
+    "server_id": 507,
+    "dimension": "minecraft:overworld",
+    "pos": [
+      0,
+      10,
+      0
+    ],
+    "wait_ticks": 4,
+    "npcs": [],
+    "chests": [],
+    "decoys": 0,
+    "messages": [],
+    "expected": {
+      "tab": [],
+      "ban": [],
+      "copper": [],
+      "warden": [],
+      "hell": [],
+      "mine": [],
+      "coordinates": []
+    },
+    "fixture_revision": 4
+  },
+  {
+    "name": "rapid-9",
+    "host": "fixture.funtime.su",
+    "server_id": 508,
+    "dimension": "minecraft:overworld",
+    "pos": [
+      0,
+      10,
+      0
+    ],
+    "wait_ticks": 4,
+    "npcs": [],
+    "chests": [],
+    "decoys": 0,
+    "messages": [],
+    "expected": {
+      "tab": [],
+      "ban": [],
+      "copper": [],
+      "warden": [],
+      "hell": [],
+      "mine": [],
+      "coordinates": []
+    },
+    "fixture_revision": 4
+  },
+  {
+    "name": "rapid-10",
+    "host": "fixture.funtime.su",
+    "server_id": 509,
+    "dimension": "minecraft:overworld",
+    "pos": [
+      0,
+      10,
+      0
+    ],
+    "wait_ticks": 4,
+    "npcs": [],
+    "chests": [],
+    "decoys": 0,
+    "messages": [],
+    "expected": {
+      "tab": [],
+      "ban": [],
+      "copper": [],
+      "warden": [],
+      "hell": [],
+      "mine": [],
+      "coordinates": []
+    },
+    "fixture_revision": 4
+  },
+  {
+    "name": "rapid-11",
+    "host": "fixture.funtime.su",
+    "server_id": 510,
+    "dimension": "minecraft:overworld",
+    "pos": [
+      0,
+      10,
+      0
+    ],
+    "wait_ticks": 4,
+    "npcs": [],
+    "chests": [],
+    "decoys": 0,
+    "messages": [],
+    "expected": {
+      "tab": [],
+      "ban": [],
+      "copper": [],
+      "warden": [],
+      "hell": [],
+      "mine": [],
+      "coordinates": []
+    },
+    "fixture_revision": 4
+  },
+  {
+    "name": "rapid-12",
+    "host": "fixture.funtime.su",
+    "server_id": 511,
+    "dimension": "minecraft:overworld",
+    "pos": [
+      0,
+      10,
+      0
+    ],
+    "wait_ticks": 4,
+    "npcs": [],
+    "chests": [],
+    "decoys": 0,
+    "messages": [],
+    "expected": {
+      "tab": [],
+      "ban": [],
+      "copper": [],
+      "warden": [],
+      "hell": [],
+      "mine": [],
+      "coordinates": []
+    },
+    "fixture_revision": 4
+  }
+]

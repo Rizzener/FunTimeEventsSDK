@@ -1,0 +1,6 @@
+/.evidence/
+__pycache__/
+
+# Test evidence must survive a checkout; never includes Minecraft runtime caches.
+!/results/
+!/results/**
