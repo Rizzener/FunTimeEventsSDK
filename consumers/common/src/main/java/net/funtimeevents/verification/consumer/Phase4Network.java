@@ -44,7 +44,7 @@ public final class Phase4Network {
         checks.add(FunTimeEventsAPI.solveCaptcha("cGhhc2U0").thenAccept(v->equal(GsonHolder.INSTANCE.toJsonTree(v),fixture.get("captcha"),"captcha")));
         requests=CompletableFuture.allOf(checks.toArray(CompletableFuture[]::new));
     }
-    private FteConfig.Builder builder() {
+    FteConfig.Builder builder() {
         var b=FunTimeEventsAPI.builder().userAgent("Phase4Consumer/1").apiKey("phase4-local-key").baseUrl(base+"/v1/");
         if(!mode.equals("ws"))b.disableWebSocket();
         if(mode.equals("plain"))b.disableCompression();

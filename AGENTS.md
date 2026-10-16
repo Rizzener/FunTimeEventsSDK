@@ -72,6 +72,19 @@ FIFO events remain bounded best effort without backend ACK. Do not incidentally
 change backend protocols or runtime ownership. Full Builder configurations must
 match to share a singleton; conflicts throw without exposing credentials.
 Legacy static shutdown is global: consumer mods must not call it on disconnect.
+In rc.2, buildLease() returns a generation-bound RuntimeLease. The last lease
+stops an unpinned runtime; legacy build() pins it. Legacy shutdown rejects active
+leases. CLIENT_STOPPING force-closes. Ownership calls marshal synchronously to
+the client executor: never join such a worker from the client thread. Builder
+mutation itself is not concurrent. Two independent legacy build() calls have no
+separate ownership accounting; coordinate them or migrate both to leases.
+
+Hardening candidate is 2.0.0-rc.2. Never modify rc.1 artifacts or results/phase6.
+Local checks: `python tools/hardening_local.py phase5_build.py --targets 1.21.4 --kind compile`.
+The wrapper sets fresh results/release-hardening and an isolated Maven Local.
+Hosted CI has separate run/attempt evidence under results/release-hardening.
+Ownership source exceptions are pinned by fixtures/release-hardening/ownership-parity.json;
+trackers and transports still require exact accepted source parity.
 
 Native startup 26.3 remains OPEN. No unverified JVM or driver workaround.
 

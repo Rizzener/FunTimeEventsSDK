@@ -23,6 +23,7 @@ def main():
     for kind in ['artifacts','network','runtime','api']:
         assert json.loads((PREFIX/a.target/(kind+'.json')).read_text())['status']=='PASS',kind
     assert json.loads((PREFIX/a.target/'doc-examples/result.json').read_text())['status']=='PASS'
+    assert json.loads((PREFIX/a.target/'lease-api/result.json').read_text())['status']=='PASS'
     if os.environ.get('GITHUB_RUN_ID'):
         spec=next(t for t in json.loads((ROOT/'targets.json').read_text())['targets'] if t['minecraft']==a.target)
         pin=next(j for j in json.loads((ROOT/'ci/phase5/jdks.json').read_text()) if j['feature']==spec['java'])

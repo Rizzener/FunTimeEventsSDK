@@ -12,6 +12,7 @@ def normalize(text):
 def verify():
     old=ROOT/'fixtures/binary-compat/phase4-source-baseline.jar'
     checks={};exceptions={}
+    ownership=json.loads((ROOT/'fixtures/release-hardening/ownership-parity.json').read_text())
     excluded={'PocEventsAPI.java','BanSliceAPI.java','TrackerSliceAPI.java','PocCore.java'}
     with zipfile.ZipFile(old) as z:
         for name in z.namelist():
@@ -23,6 +24,11 @@ def verify():
             if p is None:
                 checks[name]=False;continue
             expected=normalize(z.read(name).decode('utf-8'))
+            if name.rsplit('/',1)[-1] in ownership:
+                approved=ownership[name.rsplit('/',1)[-1]]
+                checks[name]=hashlib.sha256(expected.encode()).hexdigest()==approved['baseline_sha256'] and hashlib.sha256(p.read_text(encoding='utf-8').encode()).hexdigest()==approved['candidate_sha256']
+                exceptions[name]='Reviewed rc.2 ownership change; both baseline and candidate source hashes pinned'
+                continue
             if name.endswith('/TrackerMetrics.java'):
                 expected=expected.replace('Opt-in fixture diagnostics.','Opt-in internal diagnostics.')
             checks[name]=expected==p.read_text(encoding='utf-8')

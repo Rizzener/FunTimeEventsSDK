@@ -3,6 +3,7 @@ import argparse,datetime,hashlib,json,os,shutil,subprocess,urllib.request,urllib
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 API='https://api.github.com/repos/Rizzener/FunTimeEventsSDK/'
+EVIDENCE=ROOT/os.environ.get('FTE_HOSTED_EVIDENCE','results/phase6/hosted')
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self,*args,**kwargs):return None
@@ -41,7 +42,7 @@ def main():
         run=get(base,token);assert run['status']=='completed'
         jobs=get(base+'/jobs?per_page=100',token)
         # Never overwrite the latest attempt's top-level provenance snapshots.
-        out=ROOT/'results/phase6/hosted'/str(a.run_id)/'attempt-history'/str(a.collect_attempt);out.mkdir(parents=True,exist_ok=True)
+        out=EVIDENCE/str(a.run_id)/'attempt-history'/str(a.collect_attempt);out.mkdir(parents=True,exist_ok=True)
         (out/'run.json').write_text(json.dumps(run,indent=2)+'\n');(out/'jobs.json').write_text(json.dumps(jobs,indent=2)+'\n')
         archive=out/'workflow-logs.zip'
         if not archive.exists():download(base+'/logs',token,archive)
@@ -57,7 +58,7 @@ def main():
         print('PRIOR_ATTEMPT_RETAINED',a.run_id,a.collect_attempt,'job_count',len(jobs['jobs']),'individual_blobs_unavailable',len(unavailable));return
     token=credential();run=get(f'actions/runs/{a.run_id}',token);jobs=get(f'actions/runs/{a.run_id}/jobs?per_page=100',token)
     artifacts=get(f'actions/runs/{a.run_id}/artifacts?per_page=100',token)
-    out=ROOT/'results/phase6/hosted'/str(a.run_id);out.mkdir(parents=True,exist_ok=True)
+    out=EVIDENCE/str(a.run_id);out.mkdir(parents=True,exist_ok=True)
     stamp=datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d-%H%M%S')
     for name,value in [('run',run),('jobs',jobs),('artifacts',artifacts)]:
         (out/(stamp+'-'+name+'.json')).write_text(json.dumps(value,indent=2)+'\n',encoding='utf-8')

@@ -2,7 +2,7 @@ name: SDK release candidate
 on:
   push:
     branches: ['integration/**']
-    paths-ignore: ['PHASE6_RESULTS.md', 'RELEASE_DECISIONS.md', 'tools/phase6_report.py', 'tools/github_phase6.py', 'tools/inspect_jitpack.py', 'tools/verify_published_legacy.py', 'tools/phase6_native_capture.py', 'tools/reclaim_completed_example.py', 'phase6_historical_integrity.py']
+    paths-ignore: ['PHASE6_RESULTS.md', 'RELEASE_DECISIONS.md', 'tools/phase6_report.py', 'tools/github_phase6.py', 'tools/inspect_jitpack.py', 'tools/verify_published_legacy.py', 'tools/phase6_native_capture.py', 'tools/reclaim_completed_example.py', 'phase6_historical_integrity.py', 'RELEASE_HARDENING_RESULTS.md', 'RELEASE_CHECKLIST.md', 'tools/hardening_report.py', 'tools/archive_release_evidence.py']
   workflow_dispatch:
 permissions:
   contents: read
@@ -10,8 +10,8 @@ concurrency:
   group: sdk-rc-${{ github.ref }}
   cancel-in-progress: false
 env:
-  FTE_PHASE5_EVIDENCE: results/phase6/github/${{ github.run_id }}/${{ github.run_attempt }}
-  FTE_MAVEN_LOCAL: ${{ github.workspace }}/.evidence/phase6/maven-local
+  FTE_PHASE5_EVIDENCE: results/release-hardening/github/${{ github.run_id }}/${{ github.run_attempt }}
+  FTE_MAVEN_LOCAL: ${{ github.workspace }}/.evidence/release-hardening/maven-local
   LIBGL_ALWAYS_SOFTWARE: '1'
   ALSOFT_DRIVERS: 'null'
 defaults:

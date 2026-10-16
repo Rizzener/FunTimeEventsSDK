@@ -2,7 +2,7 @@
 
 ## Состояние выпуска
 
-Кандидат `2.0.0-rc.1`, не опубликован. Проверка новых артефактов — PHASE6_RESULTS.md.
+Кандидат `2.0.0-rc.2`, не опубликован. Проверка новых артефактов — RELEASE_HARDENING_RESULTS.md.
 Исторический локальный PASS этапа 5 не подменяет новые hosted результаты.
 
 ## Версии и зависимости
@@ -34,19 +34,19 @@ release namespace старых JAR — intermediary после remapJar. Сов�
 
 Все строки используют один group и одну версию релиза. Выберите ровно одну:
 
-- Minecraft 1.21.4: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.4:2.0.0-rc.1"`
-- Minecraft 1.21.5: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.5:2.0.0-rc.1"`
-- Minecraft 1.21.6: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.6:2.0.0-rc.1"`
-- Minecraft 1.21.7: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.7:2.0.0-rc.1"`
-- Minecraft 1.21.8: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.8:2.0.0-rc.1"`
-- Minecraft 1.21.9: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.9:2.0.0-rc.1"`
-- Minecraft 1.21.10: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.10:2.0.0-rc.1"`
-- Minecraft 1.21.11: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.11:2.0.0-rc.1"`
-- Minecraft 26.1: `implementation "com.github.Rizzener.FunTimeEventsSDK:mc26.1:2.0.0-rc.1"`
-- Minecraft 26.1.1: `implementation "com.github.Rizzener.FunTimeEventsSDK:mc26.1.1:2.0.0-rc.1"`
-- Minecraft 26.1.2: `implementation "com.github.Rizzener.FunTimeEventsSDK:mc26.1.2:2.0.0-rc.1"`
-- Minecraft 26.2: `implementation "com.github.Rizzener.FunTimeEventsSDK:mc26.2:2.0.0-rc.1"`
-- Minecraft 26.3: `implementation "com.github.Rizzener.FunTimeEventsSDK:mc26.3:2.0.0-rc.1"`
+- Minecraft 1.21.4: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.4:2.0.0-rc.2"`
+- Minecraft 1.21.5: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.5:2.0.0-rc.2"`
+- Minecraft 1.21.6: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.6:2.0.0-rc.2"`
+- Minecraft 1.21.7: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.7:2.0.0-rc.2"`
+- Minecraft 1.21.8: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.8:2.0.0-rc.2"`
+- Minecraft 1.21.9: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.9:2.0.0-rc.2"`
+- Minecraft 1.21.10: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.10:2.0.0-rc.2"`
+- Minecraft 1.21.11: `modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.11:2.0.0-rc.2"`
+- Minecraft 26.1: `implementation "com.github.Rizzener.FunTimeEventsSDK:mc26.1:2.0.0-rc.2"`
+- Minecraft 26.1.1: `implementation "com.github.Rizzener.FunTimeEventsSDK:mc26.1.1:2.0.0-rc.2"`
+- Minecraft 26.1.2: `implementation "com.github.Rizzener.FunTimeEventsSDK:mc26.1.2:2.0.0-rc.2"`
+- Minecraft 26.2: `implementation "com.github.Rizzener.FunTimeEventsSDK:mc26.2:2.0.0-rc.2"`
+- Minecraft 26.3: `implementation "com.github.Rizzener.FunTimeEventsSDK:mc26.3:2.0.0-rc.2"`
 
 
 Для распространения добавьте `include` с той же координатой. Для предоставляемого
@@ -115,12 +115,16 @@ Captcha: solveCaptcha(base64), всегда REST, даже при WSS.
 сессии недействительными. Backend caches принадлежат runtime. Reconnect не создаёт
 новые Fabric подписки. Не вызывайте shutdown при DISCONNECT.
 
-Legacy shutdown() останавливает глобальный runtime. В текущем кандидате один
-consumer может остановить SDK другого: это явный продуктовый риск, решение
-lease/owner изложено в RELEASE_DECISIONS.md. До принятия решения централизуйте
-владение runtime в одном host-моде. CLIENT_STOPPING очищает runtime автоматически.
-Build/shutdown выполняются на клиентском потоке. Инициализация с ошибкой очищает
-созданные ресурсы, сохраняя ранее установленный чужой runtime.
+`Builder.buildLease()` возвращает `RuntimeLease implements AutoCloseable`.
+Каждый мод хранит свой lease; последний close освобождает runtime, если legacy
+`build()` не установил lifetime pin. Закрытие идемпотентно и привязано к поколению.
+`shutdown()` отказывает при активных leases. Два независимых legacy build() нельзя
+различить без изменения старого API: согласуйте shutdown с host-модом либо перейдите
+на leases. CLIENT_STOPPING принудительно освобождает ресурсы даже с открытыми leases.
+Операции владения сериализованы на клиентском потоке; фоновый вызов ждёт его выполнения.
+Не блокируйте клиентский поток ожиданием такого worker. Builder не предназначен для
+одновременной мутации. Ошибка инициализации очищает созданные ресурсы.
+Подробная модель и ограничения — [RUNTIME_OWNERSHIP.md](docs/RUNTIME_OWNERSHIP.md).
 
 ## Гарантии доставки
 

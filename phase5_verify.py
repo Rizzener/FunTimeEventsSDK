@@ -122,6 +122,12 @@ def runtime(mc):
                 checks['online_init_rollback']=rt['public_network'].get('online_initialization_rollback',False)
                 checks['shutdown_threads_empty']=rt.get('shutdown_threads_empty',False)
             checks['two_mods_old_binary']='[PHASE4A] PEER_MOD_PASS' in (path.parent/'client.txt').read_text(encoding='utf-8',errors='replace')
+            checks['two_mod_leases']=rt.get('two_mod_leases',False) and rt.get('lease_workers')==24
+            checks['client_stopping_leases']=rt.get('client_stopping_leases',False)
+            checks['client_stopping_threads_empty']=rt.get('client_stopping_threads_empty',False)
+            checks['client_stopping_workers']=rt.get('client_stopping_workers',False)
+            checks['two_mod_last_lease']=rt.get('two_mod_last_lease',False)
+            checks['lease_generations']='[HARDENING] LEASE_GENERATION_PASS' in (path.parent/'client.txt').read_text(encoding='utf-8',errors='replace')
             perf=rt['callback_performance']
             checks['old_binary_on_new_only']='[PHASE4A] OLD_BINARY_PASS' in (path.parent/'client.txt').read_text(encoding='utf-8',errors='replace')
             checks['performance_counters']=all(perf.get(k,[0])[0]>0 for k in ['sdk_tick_active','sdk_tick_idle']) and all(rt.get('performance',{}).get(k,[0])[0]>0 for k in ['dungeon','tab','mine','hell'])

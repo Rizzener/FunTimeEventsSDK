@@ -3,7 +3,7 @@
   "loom": "1.17.21",
   "loader": "0.19.5",
   "installer": "1.1.2",
-  "sdk_version": "2.0.0-rc.1",
+  "sdk_version": "2.0.0-rc.2",
   "targets": [
     {
       "minecraft": "1.21.4",

@@ -26,6 +26,20 @@ public final class Phase4ApiCheck {
         require(offline().build()==first,"conflict changed runtime");
         FunTimeEventsAPI.shutdown();FunTimeEventsAPI.shutdown();
         require(b.runtime()==null && FunTimeEventsAPI.getEvents().isEmpty(),"shutdown left runtime/cache");
+        var lease=offline().buildLease();var generation=b.runtime();
+        var second=offline().buildLease();
+        expect(IllegalStateException.class,FunTimeEventsAPI::shutdown);
+        expect(IllegalStateException.class,()->offline().userAgent("ConflictingLease").buildLease());
+        lease.close();lease.close();require(b.runtime()==generation,"first lease stopped peer");
+        second.close();require(b.runtime()==null,"last lease did not stop runtime");
+        var stale=offline().buildLease();
+        net.funtimeevents.api.LeaseGenerationFixture.invalidate();
+        var replacement=offline().buildLease();var next=b.runtime();
+        stale.close();require(b.runtime()==next,"stale generation stopped replacement");
+        offline().build();replacement.close();
+        require(b.runtime()==next,"lease ignored legacy lifetime pin");
+        FunTimeEventsAPI.shutdown();
+        System.out.println("[HARDENING] LEASE_GENERATION_PASS last_close legacy_pin stale_close shutdown_conflict");
         // Each original disable method remains usable and yields a fresh SDK after shutdown.
         offline().disableScanTabPlayers().disableBansTracker().disableScanDungeon().disableScanHellMap()
             .disableScanMine().disableEventCoordinatesTracker().disableWebSocket().disableCompression().tickIntervalSeconds(1).build();

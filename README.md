@@ -2,9 +2,9 @@
 
 Клиентский Fabric SDK для FunTimeEvents API: игровые трекеры, REST, WebSocket и SSE.
 
-**Ветка release candidate, версия `2.0.0-rc.1`. Публичный выпуск ещё не выполнен.**
+**Ветка release candidate, версия `2.0.0-rc.2`. Публичный выпуск ещё не выполнен.**
 Таблица ниже задаёт целевые артефакты. Фактическая повторная проверка интегрированной
-версии, hosted CI и оставшиеся ограничения фиксируются в [PHASE6_RESULTS.md](PHASE6_RESULTS.md).
+версии, hosted CI и оставшиеся ограничения фиксируются в [RELEASE_HARDENING_RESULTS.md](RELEASE_HARDENING_RESULTS.md).
 Принятые результаты этапа 5 остаются в [историческом отчёте](poc/multiversion/PHASE5_RESULTS.md).
 
 ## Цели
@@ -37,8 +37,8 @@ Fabric Loader: **0.19.5** или совместимая более новая в
 ```groovy
 repositories { maven { url = 'https://jitpack.io' } }
 dependencies {
-    modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.4:2.0.0-rc.1"
-    include "com.github.Rizzener.FunTimeEventsSDK:mc1.21.4:2.0.0-rc.1"
+    modImplementation "com.github.Rizzener.FunTimeEventsSDK:mc1.21.4:2.0.0-rc.2"
+    include "com.github.Rizzener.FunTimeEventsSDK:mc1.21.4:2.0.0-rc.2"
 }
 ```
 
@@ -58,13 +58,17 @@ package example;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.funtimeevents.api.FunTimeEventsAPI;
+import net.funtimeevents.api.RuntimeLease;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 
 public final class ExampleClient implements ClientModInitializer {
+    private RuntimeLease lease;
     @Override public void onInitializeClient() {
-        FunTimeEventsAPI.builder()
+        lease=FunTimeEventsAPI.builder()
             .userAgent("ExampleMod/1.0")
             .apiKey(System.getProperty("fte.apiKey"))
-            .build();
+            .buildLease();
+        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> lease.close());
     }
 }
 ```
@@ -79,8 +83,9 @@ public final class ExampleClient implements ClientModInitializer {
 ## Ограничения
 
 Один глобальный runtime. Повторный Builder принимает только полностью совпадающую
-конфигурацию; конфликт явно отклоняется. `shutdown()` пока глобален: не вызывайте его
-при выходе с сервера и не используйте независимо в нескольких модах без координации.
+конфигурацию; конфликт явно отклоняется. Для независимых модов используйте `buildLease()`
+и закрывайте свой `RuntimeLease`. Legacy `build()` удерживает runtime до `shutdown()`;
+при активных leases `shutdown()` явно отказывает. Подробности — [Runtime ownership](docs/RUNTIME_OWNERSHIP.md).
 Доставка payload — bounded best effort, без backend ACK и exactly-once.
 Известный Windows native startup crash 26.3 остаётся **OPEN**.
 

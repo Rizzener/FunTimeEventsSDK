@@ -13,6 +13,7 @@ python3 phase5_build.py --targets "$mc" --kind consumer
 python3 phase6_examples.py --target "$mc"
 python3 phase5_verify.py --targets "$mc" --stage artifacts
 python3 phase5_api.py --targets "$mc"
+python3 phase6_lease_api.py --target "$mc"
 python3 phase6_compat_inventory.py --targets "$mc"
 python3 prepare_phase4_tls.py
 python3 phase5_run.py --targets "$mc" --kind network

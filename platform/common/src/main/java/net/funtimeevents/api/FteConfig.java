@@ -196,5 +196,15 @@ public final class FteConfig {
         public FunTimeEventsAPI build() {
             return FunTimeEventsAPI.create(this);
         }
+
+        /**
+         * Acquires ownership of the shared SDK runtime. Equal complete configurations
+         * share it; conflicts fail. Close the lease when this consumer stops using it.
+         * Calls from a worker wait for the Minecraft client thread; never join that
+         * worker from the client thread. A Builder must not be mutated concurrently.
+         */
+        public RuntimeLease buildLease() {
+            return FunTimeEventsAPI.createLease(this);
+        }
     }
 }

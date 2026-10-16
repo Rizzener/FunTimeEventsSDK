@@ -19,6 +19,9 @@ import java.util.concurrent.CompletableFuture;
 /** Existing SDK facade. One fully initialized runtime is published atomically. */
 public final class FunTimeEventsAPI {
     private static volatile FunTimeEventsAPI instance;
+    // Client-thread owned. Object identity is the runtime generation token.
+    private boolean legacyPin;
+    private int leases;
     private final FteConfig config;
     private final SessionFence gameSession=new SessionFence();
     private volatile ApiClient restClient;
@@ -34,9 +37,23 @@ public final class FunTimeEventsAPI {
         return FabricLoader.getInstance().getModContainer("fte-api")
             .map(c->c.getMetadata().getVersion().getFriendlyString()).orElse("unknown");
     }
-    static synchronized FunTimeEventsAPI create(FteConfig.Builder builder) {
+    static FunTimeEventsAPI create(FteConfig.Builder builder) {
         FteConfig config=new FteConfig(builder);
         validate(config);
+        return Bootstrap.onClientThread(()->{
+            var api=acquire(config);api.legacyPin=true;return api;
+        });
+    }
+    static RuntimeLease createLease(FteConfig.Builder builder) {
+        FteConfig config=new FteConfig(builder);
+        validate(config);
+        return Bootstrap.onClientThread(()->{
+            var api=acquire(config);
+            var lease=new RuntimeLease(api);
+            api.leases++;return lease;
+        });
+    }
+    private static FunTimeEventsAPI acquire(FteConfig config) {
         if(instance!=null) {
             if(!sameConfig(instance.config,config))
                 throw new IllegalStateException("SDK already initialized with a different configuration; sharing credentials/configuration implicitly is forbidden");
@@ -51,8 +68,11 @@ public final class FunTimeEventsAPI {
             FteLogger.info(FteLogger.CORE,"SDK initialized mode="+(config.offlineMode()?"offline":config.wsMode()?"wss":"rest"));
             return api;
         } catch(RuntimeException | Error error) {
-            if(Bootstrap.getInstance().runtime()==api.trackers && api.trackers!=null)Bootstrap.getInstance().detach();
-            api.closeResources();FteLogger.setLevel(previousLogLevel);throw error;
+            try {
+                if(Bootstrap.getInstance().runtime()==api.trackers && api.trackers!=null)Bootstrap.getInstance().detach();
+            } catch(RuntimeException | Error cleanup) {error.addSuppressed(cleanup);}
+            try {api.closeResources();}catch(RuntimeException | Error cleanup){error.addSuppressed(cleanup);}
+            FteLogger.setLevel(previousLogLevel);throw error;
         }
     }
     private static void validate(FteConfig c) {
@@ -93,18 +113,49 @@ public final class FunTimeEventsAPI {
         }
         trackers=new TrackerRuntime(Bootstrap.getInstance().platform(),sender,config.tickIntervalSeconds()*20,
             config.bansEnabled(),config.dungeonEnabled(),config.hellMapEnabled(),config.tabPlayersEnabled(),config.mineEnabled(),config.coordinatesEnabled(),gameSession);
-        Bootstrap.getInstance().install(trackers);
+        Bootstrap.getInstance().install(trackers,FunTimeEventsAPI::clientStopping);
     }
-    /** Stops the SDK runtime; build/shutdown belong to the Minecraft client thread. */
-    public static synchronized void shutdown() {
+    /** Stops a legacy-owned runtime. Active leases must be closed by their owners. */
+    public static void shutdown() {
         if(instance==null)return;
-        Bootstrap.requireClientThread();var old=instance;instance=null;
+        Bootstrap.onClientThread(()->{
+            if(instance!=null && instance.leases!=0)
+                throw new IllegalStateException("SDK has active RuntimeLease owners; close their leases before legacy shutdown");
+            stopRuntime();return null;
+        });
+    }
+    static void release(FunTimeEventsAPI generation) {
+        if(instance!=generation)return;
+        try {
+            Bootstrap.onClientThread(()->{
+                if(instance==generation && --generation.leases==0 && !generation.legacyPin)stopRuntime();
+                return null;
+            });
+        } catch(IllegalStateException error) {
+            // CLIENT_STOPPING has already invalidated this generation.
+            if(instance==generation)throw error;
+        }
+    }
+    /** Internal process teardown, called only by the one Fabric lifecycle bridge. */
+    static void clientStopping() {
+        Bootstrap.requireClientThread();stopRuntime();
+    }
+    private static void stopRuntime() {
+        if(instance==null)return;
+        var old=instance;instance=null;
         try {Bootstrap.getInstance().detach();}finally{old.closeResources();}
     }
     private void closeResources() {
-        if(eventCache!=null)eventCache.stop();if(userEventCache!=null)userEventCache.stop();
-        if(mineCache!=null)mineCache.stop();if(copperCache!=null)copperCache.stop();if(wardenCache!=null)wardenCache.stop();
-        if(wsClient!=null)wsClient.disconnect();if(restClient!=null)restClient.close();
+        Throwable failure=null;
+        for(Runnable close:new Runnable[]{
+            ()->{if(eventCache!=null)eventCache.stop();},()->{if(userEventCache!=null)userEventCache.stop();},
+            ()->{if(mineCache!=null)mineCache.stop();},()->{if(copperCache!=null)copperCache.stop();},
+            ()->{if(wardenCache!=null)wardenCache.stop();},()->{if(wsClient!=null)wsClient.disconnect();},
+            ()->{if(restClient!=null)restClient.close();}}) {
+            try {close.run();}catch(RuntimeException | Error error){if(failure==null)failure=error;else failure.addSuppressed(error);}
+        }
+        if(failure instanceof RuntimeException error)throw error;
+        if(failure instanceof Error error)throw error;
     }
     public static CompletableFuture<String> fetchEvents(Map<String,String> params) {
         var r=instance;return r!=null&&r.restClient!=null?r.restClient.getEvents(params):CompletableFuture.completedFuture(null);

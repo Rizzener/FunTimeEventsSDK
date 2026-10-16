@@ -1,0 +1,17 @@
+{
+  "FunTimeEventsAPI.java": {
+    "baseline_sha256": "f0b235f740a39cf5c36a60c55dce72d0c7fa89be71a4f543b0c7af9f728930fc",
+    "candidate_sha256": "0f44230656b3f0b1f3ce0961ed6e2a403747118af4c73e197e0a0ea5ef6121f9",
+    "reason": "RuntimeLease ownership; additive Builder API, client executor handoff, generation and cleanup"
+  },
+  "FteConfig.java": {
+    "baseline_sha256": "0419c5b72f62ab0b8340bc234f923c925f94ab1cf13b95323107e6b6433ed379",
+    "candidate_sha256": "4e92935e794c8d65c8aa1376d4839f248bafd19640ee315d0d2c84864d7984f8",
+    "reason": "RuntimeLease ownership; additive Builder API, client executor handoff, generation and cleanup"
+  },
+  "Bootstrap.java": {
+    "baseline_sha256": "85eadbd644042a1cd1f43d2f9465be23a4ef2d4f84b4051356b87d40db39a4de",
+    "candidate_sha256": "be2e869be647efea33c2929f15e3a580fc0959fa54ce7d1a874b813dc3d23d81",
+    "reason": "RuntimeLease ownership; additive Builder API, client executor handoff, generation and cleanup"
+  }
+}

@@ -41,6 +41,9 @@ public final class Phase3Consumer implements PayloadSender {
     private final boolean phase4a = "a".equals(System.getProperty("fte.phase4.stage"));
     private final boolean phase4online = Set.of("b","c").contains(System.getProperty("fte.phase4.stage",""));
     private final Phase4Network network;
+    private net.funtimeevents.api.RuntimeLease primaryLease;
+    private JsonObject stopOutput;
+    private java.util.concurrent.CompletableFuture<Void> stopWorkers;
     private final boolean phase4flags=Boolean.getBoolean("fte.phase4.flags");
     private int observedJoins,observedDisconnects,totalPeriodic;
     private final com.sun.management.ThreadMXBean allocationBean =
@@ -82,6 +85,11 @@ public final class Phase3Consumer implements PayloadSender {
             Phase4ApiCheck.run();net.funtimeevents.api.FunTimeEventsAPI.shutdown();
             network=new Phase4Network();runtime=net.funtimeevents.bootstrap.Bootstrap.getInstance().runtime();
         } else {runtime=TrackerSliceAPI.start(this);network=null;}
+        if(phase4a||phase4online)primaryLease=leaseBuilder().buildLease();
+    }
+    private net.funtimeevents.api.FteConfig.Builder leaseBuilder() {
+        if(phase4a)return Phase4ApiCheck.offline();
+        return network.builder();
     }
     private void beforeMessage() {
         messageAllocated=allocationBean.getThreadAllocatedBytes(renderThreadId);messageStarted=System.nanoTime();
@@ -93,6 +101,30 @@ public final class Phase3Consumer implements PayloadSender {
 
     public static void start() { new Phase3Consumer().install(); }
     private void install() {
+        if(phase4a||phase4online)net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STOPPING.register(client->{
+            if(stopOutput==null)return;
+            try {
+                require(net.funtimeevents.bootstrap.Bootstrap.getInstance().runtime()==null,"CLIENT_STOPPING retained leased runtime");
+                primaryLease.close();primaryLease.close();PeerConsumer.releaseLease();
+                stopWorkers.get(5,java.util.concurrent.TimeUnit.SECONDS);
+                try {leaseBuilder().buildLease();throw new AssertionError("Acquire after CLIENT_STOPPING accepted");}
+                catch(IllegalStateException expected) {}
+                long until=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(5);
+                List<String> remaining;
+                do {
+                    remaining=Thread.getAllStackTraces().keySet().stream().filter(t->t.isAlive()&&t.getName().startsWith("FTE-"))
+                        .map(Thread::getName).sorted().toList();
+                    if(remaining.isEmpty())break;
+                    try {Thread.sleep(10);}catch(InterruptedException e){Thread.currentThread().interrupt();break;}
+                }while(System.nanoTime()<until);
+                require(remaining.isEmpty(),"CLIENT_STOPPING leaked threads: "+remaining);
+                stopOutput.addProperty("client_stopping_leases",true);
+                stopOutput.addProperty("client_stopping_threads_empty",true);
+                stopOutput.addProperty("client_stopping_workers",true);
+                System.out.println("[HARDENING] CLIENT_STOPPING_PASS two_open_leases resources_closed=true");
+            } catch(Throwable error) {error.printStackTrace();stopOutput.addProperty("status","FAIL");stopOutput.addProperty("error",error.toString());}
+            writeResult(stopOutput);
+        });
         ClientChunkEvents.CHUNK_LOAD.register((world,chunk)->chunkEvent("load",chunk.getPos().toString()));
         ClientChunkEvents.CHUNK_UNLOAD.register((world,chunk)->chunkEvent("unload",chunk.getPos().toString()));
         var loader=FabricLoader.getInstance();
@@ -177,7 +209,11 @@ public final class Phase3Consumer implements PayloadSender {
     }
     private void connect() {
         session++;ready=false;ended=false;acked=false;bossChanged=false;bossRemoved=false;delay=-1;chunkEvents.asList().clear();
-        if(phase4flags) {network.reconfigure(session);runtime=net.funtimeevents.bootstrap.Bootstrap.getInstance().runtime();}
+        if(phase4flags) {
+            require(PeerConsumer.leasesVerified(),"Worker lease checks not complete before reconfiguration");
+            PeerConsumer.releaseLease();primaryLease.close();
+            network.reconfigure(session);runtime=net.funtimeevents.bootstrap.Bootstrap.getInstance().runtime();
+        }
         if(network!=null)network.begin(session).whenComplete((v,error)->Minecraft.getInstance().execute(()->{
             if(error!=null)finish("FAIL",error.toString());else startConnection();
         }));else startConnection();
@@ -318,7 +354,12 @@ public final class Phase3Consumer implements PayloadSender {
         output.addProperty("disconnect_deferred_ticks",disconnectDeferredTicks);
         output.addProperty("phase4a",phase4a);
         if(network!=null){output.add("public_network",network.result);network.close();}
-        if(phase4a||phase4online) { net.funtimeevents.api.FunTimeEventsAPI.shutdown();
+        if(phase4a||phase4online) {
+            require(PeerConsumer.leasesVerified(),"Peer worker lease checks incomplete/failed");
+            output.addProperty("two_mod_leases",true);output.addProperty("lease_workers",24);
+            PeerConsumer.releaseLease();primaryLease.close();primaryLease.close();
+            require(net.funtimeevents.bootstrap.Bootstrap.getInstance().runtime()==runtime,"Legacy pin lost after both mods released");
+            net.funtimeevents.api.FunTimeEventsAPI.shutdown();
             require(net.funtimeevents.bootstrap.Bootstrap.getInstance().runtime()==null,"Shutdown retained runtime"); }
         output.add("sessions",results);output.add("callbacks",callbacks);output.add("payloads",payloads);output.add("performance",GsonHolder.INSTANCE.toJsonTree(TrackerMetrics.scans()));
         output.add("callback_performance",GsonHolder.INSTANCE.toJsonTree(callbackPerformance));
@@ -336,8 +377,28 @@ public final class Phase3Consumer implements PayloadSender {
                 output.addProperty("shutdown_threads_empty",remaining.isEmpty());output.add("shutdown_remaining_threads",GsonHolder.INSTANCE.toJsonTree(remaining));
                 if(!remaining.isEmpty()){output.addProperty("status","FAIL");output.addProperty("error","SDK threads remained after shutdown: "+remaining);}
                 writeResult(output);
-            }).whenComplete((v,writeFailure)->{if(writeFailure!=null)writeFailure.printStackTrace();Minecraft.getInstance().execute(()->Minecraft.getInstance().stop());});
-        } else {writeResult(output);Minecraft.getInstance().stop();}
+            }).whenComplete((v,writeFailure)->{if(writeFailure!=null)writeFailure.printStackTrace();Minecraft.getInstance().execute(()->stopWithLeases(output));});
+        } else {writeResult(output);stopWithLeases(output);}
+    }
+    private void stopWithLeases(JsonObject output) {
+        if(phase4a||phase4online) {
+            primaryLease=leaseBuilder().buildLease();PeerConsumer.holdForStop(leaseBuilder());
+            var generation=net.funtimeevents.bootstrap.Bootstrap.getInstance().runtime();primaryLease.close();
+            require(net.funtimeevents.bootstrap.Bootstrap.getInstance().runtime()==generation,"Primary stopped peer-only runtime");
+            PeerConsumer.releaseLease();
+            require(net.funtimeevents.bootstrap.Bootstrap.getInstance().runtime()==null,"Peer last lease left runtime");
+            output.addProperty("two_mod_last_lease",true);
+            primaryLease=leaseBuilder().buildLease();PeerConsumer.holdForStop(leaseBuilder());stopOutput=output;
+            var jobs=new java.util.ArrayList<java.util.concurrent.CompletableFuture<Void>>();
+            for(int i=0;i<4;i++)jobs.add(java.util.concurrent.CompletableFuture.runAsync(()->{
+                try {var owned=leaseBuilder().buildLease();owned.close();}
+                catch(IllegalStateException stopping) {
+                    if(!stopping.getMessage().contains("stopping"))throw stopping;
+                }
+            }));
+            stopWorkers=java.util.concurrent.CompletableFuture.allOf(jobs.toArray(java.util.concurrent.CompletableFuture[]::new));
+        }
+        Minecraft.getInstance().stop();
     }
     private void writeResult(JsonObject output) {
         try{Files.writeString(Path.of("phase3-result.json"),GsonHolder.INSTANCE.toJson(output),StandardCharsets.UTF_8);}
