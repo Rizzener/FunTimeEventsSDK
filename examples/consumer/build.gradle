@@ -1,9 +1,9 @@
-// Independent project. Run ../../gradlew -p . build -Pminecraft_version=1.21.4
+// Standalone project. Windows: gradlew.bat build. Linux: sh gradlew build.
 buildscript {
     repositories { maven { url='https://maven.fabricmc.net/' }; mavenCentral(); gradlePluginPortal() }
     dependencies { classpath 'net.fabricmc:fabric-loom:1.17.21' }
 }
-def matrix = new groovy.json.JsonSlurper().parse(file('../../targets.json'))
+def matrix = new groovy.json.JsonSlurper().parse(file('targets.json'))
 def mc = findProperty('minecraft_version') ?: '1.21.4'
 def spec = matrix.targets.find { it.minecraft == mc }
 if(spec == null)throw new GradleException('Unknown Minecraft target: '+mc)

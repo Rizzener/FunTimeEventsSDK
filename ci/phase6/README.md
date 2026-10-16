@@ -28,9 +28,21 @@ fixtures/requirements-phase4.txt and Xvfb:
 ```sh
 export FTE_PHASE5_EVIDENCE=results/phase6/local-clean
 export FTE_MAVEN_LOCAL="$PWD/.evidence/phase6/local-clean-maven"
+chmod +x gradlew
 sh ci/phase6/job.sh 1.21.4
 ```
 
 Use a new evidence directory and a fresh staging repository for a new candidate.
 Immutable publication guards intentionally reject reusing a published version.
 Never enable public publication or change the primary channel as a CI workaround.
+
+MC26.3 requires a usable real graphics backend even under Xvfb. The Ubuntu setup
+installs standard Mesa OpenGL and Vulkan ICD packages; the game's own backend
+selection is unchanged. `graphics_check.py` records glxinfo/vulkaninfo and probes
+the exact Mojang SDL native library. Its sRGB-disabled probe is diagnostic only;
+it never changes the production game. A graphics probe alone is not runtime PASS.
+
+`phase6_process_controls.py` proves descendant cleanup and preservation of an
+unrelated control process. Linux fixtures own a separate process group. A runtime
+timeout retains available thread dumps and fails immediately; remaining modes
+stay NOT RUN. Historical failed attempts and native diagnostics remain evidence.

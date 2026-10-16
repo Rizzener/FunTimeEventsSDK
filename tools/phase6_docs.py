@@ -1,10 +1,14 @@
 """Generate target tables and exact dependency examples from the build registry."""
-import json
+import json,shutil
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 
 def main():
     c=json.loads((ROOT/'targets.json').read_text());v=c['sdk_version'];group=c['maven_group']
+    standalone=ROOT/'examples/consumer'
+    (standalone/'targets.json').write_text(json.dumps(c,indent=2)+'\n')
+    for name in ['gradlew','gradlew.bat','gradle.properties','gradle/wrapper/gradle-wrapper.jar','gradle/wrapper/gradle-wrapper.properties']:
+        target=standalone/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(ROOT/name,target)
     table='| Minecraft | Java | Fabric API | Maven artifact |\n|---|---:|---|---|\n'+''.join(f"| {t['minecraft']} | {t['java']} | `{t['fabric_api']}` | `mc{t['minecraft']}` |\n" for t in c['targets'])
     example=(ROOT/'examples/consumer/src/main/java/example/ExampleClient.java').read_text()
     readme=f'''# FunTimeEventsSDK
@@ -100,10 +104,12 @@ Minecraft target, Java constraint, Loader и Fabric API dependencies.
 ### Независимый минимальный consumer
 
 В examples/consumer нет producer project dependencies или Maven Local. Для RC:
+Папку можно скопировать отдельно: в ней собственные wrapper, sources и каталог
+версий. Родительский checkout SDK и его классы для сборки не нужны.
 
 ```sh
-./gradlew sdkStage -Ptarget_versions=1.21.4
-./gradlew -p examples/consumer build -Pminecraft_version=1.21.4 -Psdk_repository=/absolute/path/to/build/staging-maven
+sh ./gradlew sdkStage -Ptarget_versions=1.21.4
+sh examples/consumer/gradlew -p examples/consumer build -Pminecraft_version=1.21.4 -Psdk_repository=/absolute/path/to/build/staging-maven
 ```
 
 Для 26.3 поменяйте только minecraft_version и используйте соответствующий staging

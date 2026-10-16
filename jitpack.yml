@@ -3,4 +3,4 @@ jdk:
 before_install:
   - python3 ci/phase5/install_jdks.py --pins ci/phase5/jdks.json --destination "$PWD/.jitpack-jdks"
 install:
-  - JAVA_HOME="$PWD/.jitpack-jdks/25" ./gradlew sdkBuild sdkPublishLocal -Pmod_version="$VERSION" -Porg.gradle.java.installations.paths="$PWD/.jitpack-jdks/21,$PWD/.jitpack-jdks/25" -Porg.gradle.java.installations.auto-detect=false -Porg.gradle.java.installations.auto-download=false
+  - JAVA_HOME="$PWD/.jitpack-jdks/25" sh ./gradlew sdkBuild sdkPublishLocal -Pmod_version="$VERSION" -Porg.gradle.java.installations.paths="$PWD/.jitpack-jdks/21,$PWD/.jitpack-jdks/25" -Porg.gradle.java.installations.auto-detect=false -Porg.gradle.java.installations.auto-download=false

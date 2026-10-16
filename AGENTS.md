@@ -53,6 +53,9 @@ Hosted CI runs ci/phase6/job.sh; missing/failed targets fail SDK required matrix
 Evidence path includes workflow run and attempt; provenance includes commit SHA.
 Keep failed attempts, raw logs, golden fixtures, hashes and native diagnostics.
 Historical PASS never fills a new candidate matrix cell.
+`python tools/phase6_docs.py` regenerates docs and the standalone example's version
+catalog/wrapper from the root registry. CI compiles a detached copy of that example
+using its own wrapper, and rejects a stale catalog or hidden Maven Local fallback.
 
 ## Threading, lifecycle and delivery
 

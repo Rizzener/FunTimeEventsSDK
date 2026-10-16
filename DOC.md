@@ -58,10 +58,12 @@ Minecraft target, Java constraint, Loader и Fabric API dependencies.
 ### Независимый минимальный consumer
 
 В examples/consumer нет producer project dependencies или Maven Local. Для RC:
+Папку можно скопировать отдельно: в ней собственные wrapper, sources и каталог
+версий. Родительский checkout SDK и его классы для сборки не нужны.
 
 ```sh
-./gradlew sdkStage -Ptarget_versions=1.21.4
-./gradlew -p examples/consumer build -Pminecraft_version=1.21.4 -Psdk_repository=/absolute/path/to/build/staging-maven
+sh ./gradlew sdkStage -Ptarget_versions=1.21.4
+sh examples/consumer/gradlew -p examples/consumer build -Pminecraft_version=1.21.4 -Psdk_repository=/absolute/path/to/build/staging-maven
 ```
 
 Для 26.3 поменяйте только minecraft_version и используйте соответствующий staging
