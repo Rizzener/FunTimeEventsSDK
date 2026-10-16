@@ -3,13 +3,16 @@
 set -eu
 mc=$1
 python3 phase6_source_parity.py
+python3 phase6_checker_controls.py
 python3 phase5_headless_check.py
 python3 compile_legacy_probe.py --output "$FTE_PHASE5_EVIDENCE/legacy-binary-$mc"
 python3 phase5_build.py --targets "$mc" --kind compile
 python3 phase5_build.py --targets "$mc" --kind publish
 python3 phase5_build.py --targets "$mc" --kind consumer
+python3 phase6_examples.py --target "$mc"
 python3 phase5_verify.py --targets "$mc" --stage artifacts
 python3 phase5_api.py --targets "$mc"
+python3 phase6_compat_inventory.py --targets "$mc"
 python3 prepare_phase4_tls.py
 python3 phase5_run.py --targets "$mc" --kind network
 python3 phase5_verify.py --targets "$mc" --stage network
@@ -19,4 +22,5 @@ if [ "$mc" = 26.3 ]; then
 fi
 python3 phase5_verify.py --targets "$mc" --stage runtime
 python3 phase6_artifacts.py --targets "$mc"
+python3 phase6_perf.py --targets "$mc"
 python3 phase6_provenance.py --target "$mc"

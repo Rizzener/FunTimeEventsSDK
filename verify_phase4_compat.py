@@ -10,10 +10,14 @@ def signatures(jar, classes):
     result={};current=None;declaration=None
     for line in p.stdout.splitlines():
         text=line.strip()
-        if text.startswith('public ') and text.endswith('{'):
-            current=re.search(r'(?:class|interface|enum) ([^ <{]+)',text).group(1);result[current]=set()
+        if text.endswith('{') and re.search(r'\b(?:class|interface|enum) ',text):
+            # Reset on non-public headers too: anonymous listener methods must
+            # never be attributed to the preceding public outer class.
+            current=re.search(r'(?:class|interface|enum) ([^ <{]+)',text).group(1) if text.startswith('public ') else None
+            if current is not None:result[current]=set()
+            declaration=None
         elif text.startswith('public '):declaration=text
-        elif text.startswith('descriptor:') and declaration:
+        elif text.startswith('descriptor:') and declaration and current is not None:
             name=re.search(r'([\w$<>]+)(?:\([^;]*\))?;$',declaration).group(1)
             result[current].add(name+' '+text.split(':',1)[1].strip());declaration=None
     return result,p.stdout

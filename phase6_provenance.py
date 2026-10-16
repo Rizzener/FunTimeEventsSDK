@@ -22,6 +22,7 @@ def main():
     assert artifacts['status']=='PASS'
     for kind in ['artifacts','network','runtime','api']:
         assert json.loads((PREFIX/a.target/(kind+'.json')).read_text())['status']=='PASS',kind
+    assert json.loads((PREFIX/a.target/'doc-examples/result.json').read_text())['status']=='PASS'
     value={'status':'PASS','identity':expected,'artifact_sha256':artifacts['sha256']}
     (PREFIX/a.target/'provenance.json').write_text(json.dumps(value,indent=2)+'\n')
     print('PROVENANCE_PASS',a.target,expected)

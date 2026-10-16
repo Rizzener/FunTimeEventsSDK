@@ -73,6 +73,11 @@ if(legacy)productionPeer=tasks.named('remapPeerJar') {
 }
 tasks.named('prodClient') {
     if(providers.gradleProperty('phase4stage').isPresent())mods.from(productionPeer)
+    if(findProperty('phase6_mod_file')) {
+        // Loader negative tests use real published SDK bytes in tiny consumer JARs.
+        mods.setFrom(fileTree(findProperty('phase6_mod_file')) { include '*.jar' },configurations.productionRuntimeMods)
+        jvmArgs.add('-Djava.awt.headless=true')
+    }
 }
 tasks.named('processResources') {
     inputs.properties(version: project.version, minecraft: mc, java: language)

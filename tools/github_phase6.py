@@ -1,0 +1,63 @@
+"""Read hosted CI evidence using existing Git credentials; never prints credentials."""
+import argparse,datetime,json,os,shutil,subprocess,urllib.request,urllib.error,zipfile
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+API='https://api.github.com/repos/Rizzener/FunTimeEventsSDK/'
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self,*args,**kwargs):return None
+
+def credential():
+    env=dict(os.environ,GIT_TERMINAL_PROMPT='0',GCM_INTERACTIVE='Never')
+    p=subprocess.run(['git','credential','fill'],input='protocol=https\nhost=github.com\n\n',text=True,capture_output=True,env=env,timeout=30)
+    if p.returncode:raise RuntimeError('Existing GitHub credential unavailable')
+    values=dict(line.split('=',1) for line in p.stdout.splitlines() if '=' in line)
+    return values['password']
+
+def request(path,token):
+    assert path.startswith('actions/'),path
+    return urllib.request.Request(API+path,headers={'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'FunTimeEventsSDK-Phase6-Evidence'})
+
+def get(path,token):
+    with urllib.request.urlopen(request(path,token),timeout=60) as r:return json.load(r)
+
+def download(path,token,target):
+    try:
+        response=urllib.request.build_opener(NoRedirect).open(request(path,token),timeout=60)
+    except urllib.error.HTTPError as e:
+        if e.code!=302:raise
+        location=e.headers['Location'];assert location.startswith('https://')
+        # Signed artifact/log URLs are fetched without GitHub Authorization.
+        response=urllib.request.urlopen(location,timeout=60)
+    with response,target.open('wb') as f:shutil.copyfileobj(response,f)
+
+def main():
+    p=argparse.ArgumentParser();p.add_argument('--run-id',type=int,required=True);p.add_argument('--collect',action='store_true');p.add_argument('--cancel-superseded',action='store_true');a=p.parse_args()
+    token=credential();run=get(f'actions/runs/{a.run_id}',token);jobs=get(f'actions/runs/{a.run_id}/jobs?per_page=100',token)
+    artifacts=get(f'actions/runs/{a.run_id}/artifacts?per_page=100',token)
+    out=ROOT/'results/phase6/hosted'/str(a.run_id);out.mkdir(parents=True,exist_ok=True)
+    stamp=datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d-%H%M%S')
+    for name,value in [('run',run),('jobs',jobs),('artifacts',artifacts)]:
+        (out/(stamp+'-'+name+'.json')).write_text(json.dumps(value,indent=2)+'\n',encoding='utf-8')
+    if a.cancel_superseded:
+        assert run['head_branch']=='integration/multiversion-rc' and run['status']!='completed'
+        req=request(f'actions/runs/{a.run_id}/cancel',token);req.method='POST'
+        with urllib.request.urlopen(req,timeout=30) as response:code=response.status
+        (out/(stamp+'-superseded.json')).write_text(json.dumps({'http_status':code,'reason':'Superseded by mandatory Loader, full public inventory and standalone consumer negative controls; no SDK source change.'},indent=2)+'\n')
+        print('SUPERSEDED_CANCEL_REQUESTED',a.run_id,code)
+    print(json.dumps({'id':a.run_id,'status':run['status'],'conclusion':run['conclusion'],'url':run['html_url'],
+        'jobs':[{'id':j['id'],'name':j['name'],'status':j['status'],'conclusion':j['conclusion'],
+                 'failed_steps':[s['name'] for s in j.get('steps',[]) if s['conclusion']=='failure']} for j in jobs['jobs']]},indent=2))
+    if a.collect:
+        assert run['status']=='completed','Collect only immutable completed run outputs'
+        for artifact in artifacts['artifacts']:
+            dest=out/(artifact['name']+'.zip')
+            if not dest.exists():download(f"actions/artifacts/{artifact['id']}/zip",token,dest)
+            extracted=out/artifact['name'];extracted.mkdir(exist_ok=True)
+            with zipfile.ZipFile(dest) as z:
+                assert all((extracted/n).resolve().is_relative_to(extracted.resolve()) for n in z.namelist())
+                z.extractall(extracted)
+        logs=out/'workflow-logs.zip'
+        if not logs.exists():download(f'actions/runs/{a.run_id}/logs',token,logs)
+
+if __name__=='__main__':main()

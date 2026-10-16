@@ -80,6 +80,18 @@ at-least-once/exactly-once и не повторять неоднозначную
 который притянет все несовместимые MC targets. Имена модулей и multi-module group
 соответствуют [официальной схеме JitPack](https://docs.jitpack.io/building/).
 
+Фактическая read-only проверка 2026-10-16: JitPack API сообщает `ok` для v1.0.5,
+но POM `com.github.Rizzener.FunTimeEventsSDK:fte-api:v1.0.5` возвращает HTTP 404.
+Доступный POM имеет GAV `com.github.Rizzener:FunTimeEventsSDK:v1.0.5` (HTTP 200).
+Metadata старой сборки содержит modules=[]; это согласуется с отдельной схемой
+JitPack для repo с единственным модулем, но точную причину маршрутизации по одному
+metadata не доказываем. Raw ответы сохранены в results/phase6/jitpack-existing.
+Старые артефакты не перестраивались. Build status=ok не доказывает доступность
+старой module-координаты.
+
+Для будущего tag предлагается `2.0.0-rc.1` без префикса v: Maven version, mod version
+и Fabric semantic version constraints тогда совпадают. Старые v-tags не меняются.
+
 | Канал | Анонимное получение | Сборка/эксплуатация | Решение сейчас |
 |---|---|---|---|
 | JitPack | для публичного repo | сборка по tag/commit по запросу; требуется проверить dual JDK на его окружении | сохранить основной канал; не инициировать RC build запросом |
@@ -111,3 +123,13 @@ sdkBuild/sdkPublishLocal. Это подготовленная конфигура
    свежий anonymous consumer. Не публиковать заново под старыми версиями/координатами.
 
 В этом этапе не создаются публичные Maven releases, GitHub Release или merge.
+
+## 5. Принятая граница API совместимости
+
+Пользователь подтвердил: сохраняется заявленный SDK API; прямые внутренние вызовы
+мигрируют явно. Обязательный контракт — 36 проверяемых классов facade/config/Builder,
+models, network/cache, PayloadSender и FteLogger. Полный inventory 54 Java-public
+классов сохраняется дополнительно. Из реализации исчезли старые TrackerManager,
+tracker.ban.BanTracker, tracker.server.ServerContext и HoverEventUtil; у части
+tracker/bootstrap/util helpers изменились descriptors. Это не совместимость всей
+Java-public поверхности. Compatibility-facades для внутренних точек не добавляются.

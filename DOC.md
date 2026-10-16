@@ -145,14 +145,17 @@ targets никогда не должны загружаться в один кл
 
 ## Миграция с прежнего SDK
 
-Старые tags и `com.github.Rizzener.FunTimeEventsSDK:fte-api:<old-version>` сохраняют
-прежний смысл и не перепубликуются. Для нового релиза замените artifactId на
+Старые tags не перепубликуются. Проверка v1.0.5 обнаружила HTTP 404 для
+`com.github.Rizzener.FunTimeEventsSDK:fte-api:v1.0.5`, при этом доступен POM
+`com.github.Rizzener:FunTimeEventsSDK:v1.0.5`. Подробности и raw ответы —
+RELEASE_DECISIONS.md. Для нового релиза используйте multi-module group и artifactId
 `mc<точная-версия>`, одновременно обновите include и metadata зависимости на
 `fte-api`. Не используйте Maven relocation с fte-api на произвольный MC target:
 Maven не выбирает target из вашей версии Minecraft. Не используйте агрегат repo,
 который притянет несколько несовместимых targets.
 
-Builder, пакеты facade/config/models и сетевые публичные дескрипторы проверяются
+Предлагается новый tag без префикса v, чтобы Fabric semantic version совпадала с
+Maven version. Builder, пакеты facade/config/models и сетевые публичные дескрипторы проверяются
 по старому JAR. Внутренние tracker/bootstrap constructors не являются обещанием
 бинарной совместимости. Precompiled legacy probe запускается на новом SDK;
 это не подтверждает совместимость всех неизвестных consumer-модов.

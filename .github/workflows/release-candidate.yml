@@ -54,10 +54,35 @@ jobs:
             consumers/mc${{ matrix.mc }}/build/phase3-client/crash-reports/
           if-no-files-found: error
           retention-days: 30
+  loader-controls:
+    needs: [matrix, target]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {mc: '1.21.4', wrong: '26.3'}
+          - {mc: '26.3', wrong: '1.21.4'}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: target-*-${{ github.run_attempt }}
+          merge-multiple: true
+      - run: sh ci/phase5/bootstrap-ci.sh
+      - run: python3 phase6_loader_controls.py --target '${{ matrix.mc }}' --wrong-target '${{ matrix.wrong }}'
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: loader-controls-${{ matrix.mc }}-${{ github.run_attempt }}
+          path: ${{ env.FTE_PHASE5_EVIDENCE }}/${{ matrix.mc }}/loader-controls/
+          if-no-files-found: error
   required:
     name: SDK required matrix
     if: always()
-    needs: [matrix, target]
+    needs: [matrix, target, loader-controls]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -70,7 +95,8 @@ jobs:
         env:
           MATRIX_RESULT: ${{ needs.matrix.result }}
           TARGET_RESULT: ${{ needs.target.result }}
-        run: test "$MATRIX_RESULT" = success && test "$TARGET_RESULT" = success
+          LOADER_RESULT: ${{ needs.loader-controls.result }}
+        run: test "$MATRIX_RESULT" = success && test "$TARGET_RESULT" = success && test "$LOADER_RESULT" = success
       - run: python3 phase6_provenance.py --summary && python3 phase5_verify.py --stage summary
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
